@@ -1,158 +1,108 @@
 import random
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
+from Agent import *
+
 
 class Cryptocurrency:
-    def __init__(self, name, initial_price, is_meme_coin=False):
-        self.name = name
+    def __init__(self, name, initial_price):
+        self.coinname = name
         self.price = initial_price
-        self.is_meme_coin = is_meme_coin
         self.initial_price = initial_price
-        self.reputation = np.random.rand()  # Random reputation to start
 
-class Agent:
-    def __init__(self, id, budget, agent_type):
-        self.id = id
-        self.budget = budget
-        self.portfolio = {}
-        self.agent_type = agent_type
-
-    def buy(self, coin, amount):
-        if self.budget >= amount * coin.price:
-            if coin.coinname in self.portfolio:
-                self.portfolio[coin.coinname] += amount
-            else:
-                self.portfolio[coin.coinname] = amount
-            self.budget -= amount * coin.price
-            return True
-        return False
-
-    def sell(self, coin, amount):
-        if coin.coinname in self.portfolio and self.portfolio[coin.coinname] >= amount:
-            self.portfolio[coin.coinname] -= amount
-            self.budget += amount * coin.price
-            return True
-        return False
-
-    def act(self, coin, market):
-        pass
-
-class RationalAgent(Agent):
-    def act(self, coin, market):
-        for coin_name, coin in market.coins.items():
-            fair_value = market.get_fair_value(coin_name)
-            if coin.price < fair_value and coin.reputation > 0.3:
-                self.buy(coin, random.randint(1, 5))
-            elif coin.price > fair_value:
-                self.sell(coin, random.randint(1, 5))
-
-        if coin.coinname in self.portfolio and self.portfolio[coin.coinname] > 0:
-            # Sell based on negative sentiment among neighbors
-            neighbors = list(market.network[self.id])
-            negative_sentiment = sum(
-                market.agents[neighbor_id].portfolio.get(coin.coinname, 0) <= 0
-                for neighbor_id in neighbors
-            ) / len(neighbors) > 0.5
-            if negative_sentiment:
-                self.sell(coin, self.portfolio[coin.coinname])  # Sell all
-
-class HerdingAgent(Agent):
-    def act(self, market):
-        neighbors = list(market.network[self.id])
-        influenced = any(market.agents[neighbor_id].portfolio.get(coin_name, 0) > 0
-                         for neighbor_id in neighbors for coin_name in market.coins)
-        if influenced:
-            for coin_name, coin in market.coins.items():
-                if coin.reputation > 0.5:
-                    self.buy(coin, random.randint(1, 5))
-        else:
-            for coin_name, coin in market.coins.items():
-                self.sell(coin, random.randint(1, 5))
-
-class MemeCoinAgent(Agent):
-    def act(self, market):
-        meme_coins = [coin for coin in market.coins.values() if coin.is_meme_coin and coin.reputation > 0.5]
-        if meme_coins:
-            coin = random.choice(meme_coins)
-            self.buy(coin, random.randint(1, 10))
-
-class SniperAgent(Agent):
-    def act(self, market):
-        for coin_name, coin in market.coins.items():
-            if coin.price < coin.initial_price * 0.5:
-                self.buy(coin, random.randint(1, 10))
-            elif coin.price > coin.initial_price * 1.5:
-                self.sell(coin, random.randint(1, 10))
 
 class CryptoMarket:
-    def __init__(self, num_agents, network_type, initial_coins, agent_types):
-        self.agents = []
-        for i in range(num_agents):
-            agent_type = random.choice(agent_types)
-            self.agents.append(agent_type(i, random.randint(1000, 10000), agent_type))
-        self.coins = {coin.coinname: coin for coin in initial_coins}
-        self.network = self.create_network(network_type)
+    def __init__(self, num_agents, initial_coin):
+        num_rational_agents = num_agents // 10
+        num_herding_agents = num_agents - num_rational_agents
+        self.agents = ([RationalAgent(i, random.randint(1000, 10000)) for i in range(num_rational_agents)] +
+                       [HerdingAgent(i, random.randint(1000, 10000)) for i in range(num_herding_agents)])
+        self.coin = initial_coin
+        self.network = self.create_network(num_agents)
+        self.agent_types = {'RationalAgent': num_rational_agents, 'HerdingAgent': num_herding_agents}
 
-    def create_network(self, network_type):
-        if network_type == 'random':
-            return nx.erdos_renyi_graph(len(self.agents), 0.1)
-        elif network_type == 'scale_free':
-            return nx.barabasi_albert_graph(len(self.agents), 2)
-        elif network_type == 'small_world':
-            return nx.watts_strogatz_graph(len(self.agents), 4, 0.1)
 
-    def airdrop(self, coin, amount):
-        for agent in self.agents:
-            agent.portfolio[coin.coinname] = amount
+    def create_network(self, num_agents):
+        return nx.barabasi_albert_graph(num_agents, 2)
 
     def get_coin_price(self, coin_name):
-        return self.coins[coin_name].price
+        return self.coin.price
 
     def set_coin_price(self, coin_name, new_price):
-        self.coins[coin_name].price = new_price
+        self.coin.price = new_price
 
-    def get_fair_value(self, coin_name):
-        return self.coins[coin_name].initial_price * (1 + 0.05 * np.random.randn())  # Add some random fluctuation
-
-    def get_sentiment(self, coin_name):
-        sentiment = sum(coin_name in agent.portfolio for agent in self.agents) / len(self.agents)
-        return sentiment * (1 + 0.1 * np.random.randn())  # Sentiment fluctuates
+    def airdrop(self, agents, amount):
+        for agent in agents:
+            agent.holdings += amount
 
     def simulate(self, num_iterations):
-        price_history = {coin_name: [coin.price] for coin_name, coin in self.coins.items()}
-        for i in range(num_iterations):
-            for agent in self.agents:
-                agent.act(self)
-            for coin_name, coin in self.coins.items():
-                sentiment = self.get_sentiment(coin_name)
-                self.set_coin_price(coin_name, coin.price * (1 + sentiment))
-                price_history[coin_name].append(coin.price)
-        self.plot_price_history(price_history)
+        price_history = [self.coin.price]
+        # Initialize a dictionary to count the number of agents holding the cryptocurrency for each type
+        holdings_history = {agent_type: [0] * (num_iterations) for agent_type in self.agent_types}
 
-    def plot_price_history(self, price_history):
-        plt.figure(figsize=(12, 6))
-        for coin_name, prices in price_history.items():
-            plt.plot(range(len(prices)), prices, label=coin_name)
-        plt.xlabel('Iteration')
-        plt.ylabel('Price')
-        plt.title('Cryptocurrency Price History')
-        plt.legend()
+        for t in range(num_iterations):
+            total_bought = 0
+            total_sold = 0
+
+            agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
+
+            # Each agent acts based on its type
+            for agent in self.agents:
+                initial_holdings = agent.holdings
+                agent.act(self)
+                change_in_holdings = agent.holdings - initial_holdings
+
+                if agent.holdings>0:
+                    agent_holding_metrics[agent.get_type()] += 1
+
+                # Increment bought or sold counters
+                if change_in_holdings > 0:
+                    total_bought += change_in_holdings
+                elif change_in_holdings < 0:
+                    total_sold += -change_in_holdings
+
+            # Adjust prices based on the actions taken by agents
+            net_demand = total_bought - total_sold
+
+            if net_demand > 0:
+                price_change_factor = 1 + (net_demand / len(self.agents)) * 0.05
+                self.coin.price *= price_change_factor
+            elif net_demand < 0:
+                price_change_factor = 1 - (abs(net_demand) / len(self.agents)) * 0.05
+                self.coin.price *= price_change_factor
+
+            price_history.append(self.coin.price)
+
+            for agent_type in self.agent_types:
+                holdings_history[agent_type][t]=agent_holding_metrics[agent_type]
+
+        return price_history, holdings_history
+
+    def plot_price_history(self, price_history, holdings_history):
+        fig, axs = plt.subplots(2, 1, figsize=(12, 12))
+
+        axs[0].plot(price_history, label='Price')
+        axs[0].set_xlabel('Iteration')
+        axs[0].set_ylabel('Price')
+        axs[0].set_title('Cryptocurrency Price Simulation')
+        axs[0].legend()
+
+        for agent_type, holdings in holdings_history.items():
+            axs[1].plot(holdings, label=f'{agent_type} Holdings')
+        axs[1].set_xlabel('Iteration')
+        axs[1].set_ylabel('Number of Agents Holding')
+        axs[1].set_title('Number of Agents Holding by Agent Type')
+        axs[1].legend()
+
+        plt.tight_layout()
         plt.show()
 
+
 # Example usage
-initial_coins = [
-    Cryptocurrency('BTC', 50000),
-    Cryptocurrency('ETH', 3000),
-    Cryptocurrency('DOGE', 0.5, is_meme_coin=True)
-]
+btc = Cryptocurrency('CryptoCoin', 1.00)
 
-agent_types = [RationalAgent, HerdingAgent, MemeCoinAgent, SniperAgent]
-market = CryptoMarket(100, 'scale_free', initial_coins, agent_types)
-
-# Airdrop a new meme coin
-new_coin = Cryptocurrency('MEME', 0.01, is_meme_coin=True)
-market.coins[new_coin.name] = new_coin
-market.airdrop(new_coin, 100)
-
-market.simulate(50)
+# Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
+market = CryptoMarket(num_agents=100, initial_coin=btc)
+price_history, holdings_history = market.simulate(100)
+market.plot_price_history(price_history, holdings_history)
