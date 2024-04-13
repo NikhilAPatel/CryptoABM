@@ -6,15 +6,16 @@ from Agent import *
 
 
 class Cryptocurrency:
-    def __init__(self, name, initial_price):
+    def __init__(self, name, initial_price, ismeme):
         self.coinname = name
         self.price = initial_price
         self.initial_price = initial_price
+        self.ismeme=ismeme
 
 
 class CryptoMarket:
     def __init__(self, num_agents, initial_coin):
-        num_rational_agents = num_agents // 10
+        num_rational_agents = 20
         num_herding_agents = num_agents - num_rational_agents
         self.agents = ([RationalAgent(i, random.randint(1000, 10000)) for i in range(num_rational_agents)] +
                        [HerdingAgent(i, random.randint(1000, 10000)) for i in range(num_herding_agents)])
@@ -41,39 +42,46 @@ class CryptoMarket:
         # Initialize a dictionary to count the number of agents holding the cryptocurrency for each type
         holdings_history = {agent_type: [0] * (num_iterations) for agent_type in self.agent_types}
 
-        for t in range(num_iterations):
-            total_bought = 0
-            total_sold = 0
+        self.airdrop(self.agents, 100)
 
+        for t in range(num_iterations):
             agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
+
+            # Shuffle the agents to randomize the order of their actions
+            random.shuffle(self.agents)
 
             # Each agent acts based on its type
             for agent in self.agents:
+                # Record the state before the agent acts
                 initial_holdings = agent.holdings
+                initial_budget = agent.budget
                 agent.act(self)
-                change_in_holdings = agent.holdings - initial_holdings
 
+                # Update the holding metrics
                 if agent.holdings>0:
                     agent_holding_metrics[agent.get_type()] += 1
 
-                # Increment bought or sold counters
-                if change_in_holdings > 0:
-                    total_bought += change_in_holdings
-                elif change_in_holdings < 0:
-                    total_sold += -change_in_holdings
+                # Calculate the net demand and adjust the price accordingly
+                change_in_holdings = agent.holdings - initial_holdings
+                change_in_budget = agent.budget - initial_budget
 
-            # Adjust prices based on the actions taken by agents
-            net_demand = total_bought - total_sold
+                if change_in_holdings > 0:  # Agent bought coins
+                    bought = change_in_holdings
+                    spent = -change_in_budget
+                    price_change_factor = 1 + (bought / (spent / self.coin.price)) * 0.05
+                    self.coin.price *= price_change_factor
+                elif change_in_holdings < 0:  # Agent sold coins
+                    sold = -change_in_holdings
+                    earned = change_in_budget
+                    price_change_factor = max(0, 1 - (sold / (earned / self.coin.price)) * 0.05)
+                    self.coin.price *= price_change_factor
 
-            if net_demand > 0:
-                price_change_factor = 1 + (net_demand / len(self.agents)) * 0.05
-                self.coin.price *= price_change_factor
-            elif net_demand < 0:
-                price_change_factor = 1 - (abs(net_demand) / len(self.agents)) * 0.05
-                self.coin.price *= price_change_factor
+                # Ensure the price doesn't fall below a minimum threshold
+                self.coin.price = max(self.coin.price, self.coin.initial_price * 0.01)
 
+
+            # Record the price and update holdings for each agent type after all agents have acted
             price_history.append(self.coin.price)
-
             for agent_type in self.agent_types:
                 holdings_history[agent_type][t]=agent_holding_metrics[agent_type]
 
@@ -100,7 +108,7 @@ class CryptoMarket:
 
 
 # Example usage
-btc = Cryptocurrency('CryptoCoin', 1.00)
+btc = Cryptocurrency('CryptoCoin', 1.00, ismeme=False)
 
 # Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
 market = CryptoMarket(num_agents=100, initial_coin=btc)

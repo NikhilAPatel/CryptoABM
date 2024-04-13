@@ -1,5 +1,7 @@
 import random
 
+import numpy as np
+
 
 class Agent:
     def __init__(self, id, budget):
@@ -12,6 +14,7 @@ class Agent:
         if self.budget >= cost:
             self.budget -= cost
             self.holdings += amount
+            print(f"buying: {amount} @ {coin.price}")
             return amount
         return 0
 
@@ -19,6 +22,7 @@ class Agent:
         if self.holdings >= amount:
             self.holdings -= amount
             self.budget += amount * coin.price
+            print(f"selling: {amount} @ {coin.price}")
             return amount
         return 0
 
@@ -30,16 +34,43 @@ class Agent:
 
 
 class RationalAgent(Agent):
-    #TODO change this so it buys amount based on available cash (and sells appropriately too based on how many coins it has)
-    #TODO more sophisticated method of determining fair market value
+    """
+    A type of agent that seeks to trade rationally. When instantiated, it comes up with
+    a rational determination for the fair market value of a coin. The agent will simply buy below this
+    value and attempt to sell above it. This agent will not engage in trading memecoins.
+    """
+    def __init__(self, id, budget):
+        super().__init__(id, budget)
+        self.fair_value = None  # Will be set when the first coin is encountered
+
+    def determine_fair_value(self, initial_price):
+        # Calculate a fair value based on the initial price and some Gaussian noise
+        # The std deviation here is arbitrary and can be adjusted for different market volatilities
+        self.fair_value = np.random.normal(initial_price, initial_price * 0.1)
+        self.fair_value =2
+
     def act(self, market):
         coin = market.coin
-        # fair_value = coin.initial_price * (1 + 0.05 * np.random.randn())
-        fair_value = 2
-        if coin.price < fair_value:
-            self.buy(coin, random.randint(1,5))
-        else:
-            self.sell(coin, random.randint(1,5))
+        # Set fair value if not set already
+        if self.fair_value is None:
+            self.determine_fair_value(coin.initial_price)
+
+        # Do not trade if it's a meme coin
+        if coin.ismeme:
+            return
+
+        # Buy if the price is less than fair value, sell if more, with the amount based on budget/holdings
+        if coin.price < self.fair_value:
+            # Spend a random proportion of available budget to buy coins
+            max_affordable = self.budget // coin.price
+            buy_amount = random.randint(1, int(max(max_affordable, 1)*0.2)) #Will only spend 20% of money at once
+            # print(f"buying {buy_amount} @ {coin.price}")
+            self.buy(coin, buy_amount)
+        elif coin.price > self.fair_value and self.holdings > 0:
+            # Sell a random proportion of holdings
+            sell_amount = random.randint(1, self.holdings)
+            self.sell(coin, sell_amount)
+            # print(f"selling {sell_amount} @ {coin.price}")
 
     def get_type(self):
         return "RationalAgent"
@@ -56,6 +87,7 @@ class HerdingAgent(Agent):
         if sum(market.agents[neighbor].holdings > 0 for neighbor in neighbors) / len(
                 neighbors) > 0.5:
             self.buy(coin, 1)
+            # print(f"buying {1} @ {coin.price}")
 
         # Sell based on negative sentiment among neighbors
         if self.holdings > 0:
@@ -65,6 +97,7 @@ class HerdingAgent(Agent):
             ) / len(neighbors) > 0.5
             if negative_sentiment:
                 self.sell(coin, self.holdings)  # Sell all
+                # print(f"selling {self.holdings} @ {coin.price}")
 
     def get_type(self):
         return "HerdingAgent"
