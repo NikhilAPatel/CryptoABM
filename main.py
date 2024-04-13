@@ -1,9 +1,11 @@
+import os
 import random
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from Agent import *
-
+import imageio
+from tqdm import tqdm
 
 class Cryptocurrency:
     def __init__(self, name, initial_price, ismeme):
@@ -40,10 +42,11 @@ class CryptoMarket:
 
     def simulate(self, num_iterations):
         price_history = [self.coin.price]
+        network_states = []  # List to store network states
         # Initialize a dictionary to count the number of agents holding the cryptocurrency for each type
         holdings_history = {agent_type: [0] * (num_iterations) for agent_type in self.agent_types}
 
-        for t in range(num_iterations):
+        for t in tqdm(range(num_iterations)):
             agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
 
             # Shuffle the agents to randomize the order of their actions
@@ -83,8 +86,10 @@ class CryptoMarket:
             price_history.append(self.coin.price)
             for agent_type in self.agent_types:
                 holdings_history[agent_type][t]=agent_holding_metrics[agent_type]
+            color_map = ['green' if agent.holdings > 0 else 'grey' for agent in self.agents]
+            network_states.append(color_map)
 
-        return price_history, holdings_history
+        return price_history, holdings_history, network_states
 
     def plot_price_history(self, price_history, holdings_history, show_graph=True):
         fig, axs = plt.subplots(2, 1, figsize=(12, 12), gridspec_kw={'height_ratios': [1, 1]})
@@ -126,11 +131,33 @@ class CryptoMarket:
         pos = nx.spring_layout(self.network)  # Positioning the nodes of the network
         nx.draw(self.network, pos, node_color=color_map, with_labels=True, ax=ax)
 
+    def generate_images_and_gif(self, network_states, output_filename='network_behavior.gif'):
+        frames_directory = 'network_frames'
+        os.makedirs(frames_directory, exist_ok=True)  # Ensure the directory exists
+
+        pos = nx.spring_layout(self.network, seed=42)  # Use a fixed layout
+
+        for iteration, state in enumerate(network_states):
+            fig, ax = plt.subplots(figsize=(8, 6))
+            nx.draw(self.network, pos, node_color=state, with_labels=True, node_size=300, ax=ax)
+            ax.set_title(f'Iteration {iteration}')
+            plt.savefig(f"{frames_directory}/frame_{iteration:04d}.png")
+            plt.close()
+
+        # Creating GIF from frames
+        images = []
+        for file_name in sorted(os.listdir(frames_directory)):
+            if file_name.endswith('.png'):
+                file_path = os.path.join(frames_directory, file_name)
+                images.append(imageio.imread(file_path))
+        imageio.mimsave(output_filename, images, fps=5)  # Adjust fps to control speed of the GIF
+
 
 # Example usage
 btc = Cryptocurrency('CryptoCoin', 1.00, ismeme=False)
 
 # Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
-market = CryptoMarket(num_agents=100, initial_coin=btc, airdrop_percentage=0, num_rational_agents=5)
-price_history, holdings_history = market.simulate(100)
-market.plot_price_history(price_history, holdings_history, show_graph=True)
+market = CryptoMarket(num_agents=100, initial_coin=btc, airdrop_percentage=0, num_rational_agents=50)
+price_history, holdings_history, network_states = market.simulate(100)
+market.plot_price_history(price_history, holdings_history, show_graph=False)
+market.generate_images_and_gif(network_states)
