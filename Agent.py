@@ -14,7 +14,7 @@ class Agent:
         if self.budget >= cost:
             self.budget -= cost
             self.holdings += amount
-            print(f"buying: {amount} @ {coin.price}")
+            print(f"{self.get_type()} buying: {amount} @ {coin.price}")
             return amount
         return 0
 
@@ -22,7 +22,7 @@ class Agent:
         if self.holdings >= amount:
             self.holdings -= amount
             self.budget += amount * coin.price
-            print(f"selling: {amount} @ {coin.price}")
+            print(f"{self.get_type()} selling: {amount} @ {coin.price}")
             return amount
         return 0
 

@@ -14,14 +14,15 @@ class Cryptocurrency:
 
 
 class CryptoMarket:
-    def __init__(self, num_agents, initial_coin):
-        num_rational_agents = 20
+    def __init__(self, num_agents, initial_coin, airdrop_percentage, num_rational_agents):
         num_herding_agents = num_agents - num_rational_agents
         self.agents = ([RationalAgent(i, random.randint(1000, 10000)) for i in range(num_rational_agents)] +
                        [HerdingAgent(i, random.randint(1000, 10000)) for i in range(num_herding_agents)])
         self.coin = initial_coin
         self.network = self.create_network(num_agents)
         self.agent_types = {'RationalAgent': num_rational_agents, 'HerdingAgent': num_herding_agents}
+
+        self.airdrop(random.choices(self.agents, k=int(len(self.agents)*airdrop_percentage)), 100)
 
 
     def create_network(self, num_agents):
@@ -41,8 +42,6 @@ class CryptoMarket:
         price_history = [self.coin.price]
         # Initialize a dictionary to count the number of agents holding the cryptocurrency for each type
         holdings_history = {agent_type: [0] * (num_iterations) for agent_type in self.agent_types}
-
-        self.airdrop(self.agents, 100)
 
         for t in range(num_iterations):
             agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
@@ -87,15 +86,19 @@ class CryptoMarket:
 
         return price_history, holdings_history
 
-    def plot_price_history(self, price_history, holdings_history):
-        fig, axs = plt.subplots(2, 1, figsize=(12, 12))
+    def plot_price_history(self, price_history, holdings_history, show_graph=True):
+        fig, axs = plt.subplots(2, 1, figsize=(12, 12), gridspec_kw={'height_ratios': [1, 1]})
+        if show_graph:
+            fig, axs = plt.subplots(3, 1, figsize=(12, 24), gridspec_kw={'height_ratios': [1, 1, 2]})
 
+        # Plot the price history
         axs[0].plot(price_history, label='Price')
         axs[0].set_xlabel('Iteration')
         axs[0].set_ylabel('Price')
         axs[0].set_title('Cryptocurrency Price Simulation')
         axs[0].legend()
 
+        # Plot the number of agents holding the cryptocurrency
         for agent_type, holdings in holdings_history.items():
             axs[1].plot(holdings, label=f'{agent_type} Holdings')
         axs[1].set_xlabel('Iteration')
@@ -103,14 +106,31 @@ class CryptoMarket:
         axs[1].set_title('Number of Agents Holding by Agent Type')
         axs[1].legend()
 
+        if show_graph:
+            # Draw the network structure
+            self.draw_network(axs[2])
+            axs[2].set_title('Network Structure of Agents')
+
         plt.tight_layout()
         plt.show()
+
+    def draw_network(self, ax):
+        # Define node colors based on agent type
+        color_map = []
+        for node in self.network:
+            if isinstance(self.agents[node], RationalAgent):
+                color_map.append('blue')  # Blue for RationalAgent
+            else:
+                color_map.append('red')  # Red for HerdingAgent
+
+        pos = nx.spring_layout(self.network)  # Positioning the nodes of the network
+        nx.draw(self.network, pos, node_color=color_map, with_labels=True, ax=ax)
 
 
 # Example usage
 btc = Cryptocurrency('CryptoCoin', 1.00, ismeme=False)
 
 # Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
-market = CryptoMarket(num_agents=100, initial_coin=btc)
+market = CryptoMarket(num_agents=100, initial_coin=btc, airdrop_percentage=0, num_rational_agents=5)
 price_history, holdings_history = market.simulate(100)
-market.plot_price_history(price_history, holdings_history)
+market.plot_price_history(price_history, holdings_history, show_graph=True)
