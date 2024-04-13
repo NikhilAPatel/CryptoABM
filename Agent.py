@@ -1,11 +1,20 @@
 import random
 
+import networkx as nx
 import numpy as np
+
+class IDGenerator:
+    current_id = -1
+
+    @classmethod
+    def get_next_id(cls):
+        cls.current_id += 1
+        return cls.current_id
 
 
 class Agent:
-    def __init__(self, id, budget):
-        self.id = id
+    def __init__(self, budget):
+        self.id = IDGenerator.get_next_id()
         self.budget = budget
         self.holdings = 0
 
@@ -39,8 +48,8 @@ class RationalAgent(Agent):
     a rational determination for the fair market value of a coin. The agent will simply buy below this
     value and attempt to sell above it. This agent will not engage in trading memecoins.
     """
-    def __init__(self, id, budget):
-        super().__init__(id, budget)
+    def __init__(self, budget):
+        super().__init__( budget)
         self.fair_value = None  # Will be set when the first coin is encountered
 
     def determine_fair_value(self, initial_price):
@@ -78,11 +87,21 @@ class RationalAgent(Agent):
 
 class HerdingAgent(Agent):
     #TODO even herding agents want to take profits sometimes
+    #TODO they shoyilkd also buy more than 1 coin at a time
     def act(self, market):
         coin = market.coin
 
         # Buying based on herding behavior...
-        neighbors = list(market.network[self.id])
+        # Adjusting for directed networks: consider only incoming neighbors (predecessors)
+        if isinstance(market.network, nx.DiGraph):
+            neighbors = list(market.network.predecessors(self.id))
+        else:
+            neighbors = list(market.network[self.id])
+
+        #TODO we just return if this guy has no neihbors but maybe this should be handled differently later
+        if not neighbors:
+            return
+
         # Herd behavior: buy if the majority of neighbors have this coin
         if sum(market.agents[neighbor].holdings > 0 for neighbor in neighbors) / len(
                 neighbors) > 0.5:
