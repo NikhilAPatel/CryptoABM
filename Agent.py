@@ -3,7 +3,7 @@ import random
 import networkx as nx
 import numpy as np
 
-class IDGenerator:
+class IDGenerator:#TODO actually this should return a random unassigned id from [0, numagents] i think this is because some graphs build iteraively wioth the first few agents very well connected
     current_id = -1
 
     @classmethod

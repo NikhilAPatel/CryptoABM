@@ -7,6 +7,7 @@ from Agent import *
 import imageio
 from tqdm import tqdm
 import scipy as sp
+from CPN import create_core_periphery_network
 
 class Cryptocurrency:
     def __init__(self, name, initial_price, ismeme):
@@ -28,9 +29,7 @@ class CryptoMarket:
         self.agent_types = {'RationalAgent': num_rational_agents, 'HerdingAgent': num_herding_agents}
 
         self.airdrop(random.choices(self.agents, k=int(len(self.agents)*airdrop_percentage)), 100)
-        fig, axs = plt.subplots(2, 1, figsize=(12, 12), gridspec_kw={'height_ratios': [1, 1]})
-        self.draw_network(axs[0])
-        plt.show()
+
 
 
     def create_network(self):
@@ -51,6 +50,8 @@ class CryptoMarket:
             return G
         elif self.network_type == 'directed_small_world':
             return nx.watts_strogatz_graph(len(self.agents), 4, 0.1, directed=True)
+        elif self.network_type == "core_periphery":
+            return create_core_periphery_network(len(self.agents), core_percent = 0.1, core_connected_prob = 0.8, periphery_connected_prob = 0.01)
 
 
     def get_coin_price(self, coin_name):
@@ -153,7 +154,7 @@ class CryptoMarket:
 
         if show_graph:
             # Draw the network structure
-            self.draw_network(axs[2])
+            self.draw_network(axs[3])
             axs[3].set_title('Network Structure of Agents')
 
         plt.tight_layout()
@@ -197,8 +198,8 @@ class CryptoMarket:
 btc = Cryptocurrency('CryptoCoin', 1.00, ismeme=False)
 
 # Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
-market = CryptoMarket(num_agents=100, network_type = 'scale_free', initial_coin=btc, airdrop_percentage=0.3, num_rational_agents=50)
+market = CryptoMarket(num_agents=100, network_type = 'core_periphery', initial_coin=btc, airdrop_percentage=0.0, num_rational_agents=25)
 price_history, holdings_history, network_states, net_trade_volume_history = market.simulate(100)
-market.plot_price_history(price_history, holdings_history, net_trade_volume_history, show_graph=False)
+market.plot_price_history(price_history, holdings_history, net_trade_volume_history, show_graph=True)
 print(f"Final Price: {price_history[-1]}")
 # market.generate_images_and_gif(network_states)
