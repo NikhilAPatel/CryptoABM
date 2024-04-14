@@ -26,13 +26,13 @@ class Agent:
         cost = amount * coin.price
         if self.budget >= cost:
             self.budget -= cost
-            self.holdings[coin.coinname] = self.holdings.get(coin.coinname, 0) + amount
+            self.holdings[coin.name] = self.holdings.get(coin.name, 0) + amount
             return amount
         return 0
 
     def sell(self, coin, amount):
-        if self.holdings.get(coin.coinname, 0) >= amount:
-            self.holdings[coin.coinname] -= amount
+        if self.holdings.get(coin.name, 0) >= amount:
+            self.holdings[coin.name] -= amount
             self.budget += amount * coin.price
             return amount
         return 0
@@ -56,24 +56,24 @@ class RationalAgent(Agent):
         self.fair_values = {}
 
     def determine_fair_value(self, coin):
-        self.fair_values[coin.coinname] = np.random.normal(coin.initial_price, coin.initial_price * 0.1)
+        self.fair_values[coin.name] = np.random.normal(coin.initial_price, coin.initial_price * 0.1)
 
     def act(self, market, coin):
-        if coin.coinname not in self.fair_values:
+        if coin.name not in self.fair_values:
             self.determine_fair_value(coin)
 
-        if coin.ismeme:
+        if coin.is_meme:
             return
 
-        if coin.price < self.fair_values[coin.coinname]:
+        if coin.price < self.fair_values[coin.name]:
             max_affordable = self.budget // coin.price
             try:
                 buy_amount = random.randint(1, int(max(max_affordable, 1) * 0.2))
             except ValueError:
                 buy_amount = 0
             self.buy(coin, buy_amount)
-        elif coin.price > self.fair_values[coin.coinname] and self.holdings.get(coin.coinname, 0) > 0:
-            sell_amount = random.randint(1, self.holdings[coin.coinname])
+        elif coin.price > self.fair_values[coin.name] and self.holdings.get(coin.name, 0) > 0:
+            sell_amount = random.randint(1, self.holdings[coin.name])
             self.sell(coin, sell_amount)
 
     def get_type(self):
@@ -101,32 +101,32 @@ class LinearHerdingAgent(Agent):
             return
 
         neighbor_holdings_proportion = sum(
-            market.agents[neighbor].holdings.get(coin.coinname, 0) > 0 for neighbor in neighbors) / len(neighbors)
+            market.agents[neighbor].holdings.get(coin.name, 0) > 0 for neighbor in neighbors) / len(neighbors)
 
-        if self.holdings.get(coin.coinname, 0) == 0 and neighbor_holdings_proportion >= self.threshold:
+        if self.holdings.get(coin.name, 0) == 0 and neighbor_holdings_proportion >= self.threshold:
             max_affordable = self.budget // coin.price
             buy_amount = int(max_affordable * self.initial_buy_proportion)
             self.buy(coin, buy_amount)
-            self.average_buy_prices[coin.coinname] = coin.price
+            self.average_buy_prices[coin.name] = coin.price
 
-        if self.holdings.get(coin.coinname, 0) > 0 and coin.coinname in self.average_buy_prices:
-            current_profit = coin.price / self.average_buy_prices[coin.coinname]
+        if self.holdings.get(coin.name, 0) > 0 and coin.name in self.average_buy_prices:
+            current_profit = coin.price / self.average_buy_prices[coin.name]
             # TODO look into sell logic
             sell_probability = (1 - neighbor_holdings_proportion) * (
                     current_profit / (self.profit_threshold * self.price_sensitivity)) + \
                                (neighbor_holdings_proportion) * (current_profit - self.profit_threshold) / (
                                        current_profit + 1)
             if random.random() < sell_probability:
-                self.sell(coin, self.holdings[coin.coinname])
-                del self.average_buy_prices[coin.coinname]
+                self.sell(coin, self.holdings[coin.name])
+                del self.average_buy_prices[coin.name]
 
-        if self.holdings.get(coin.coinname, 0) > 0:
+        if self.holdings.get(coin.name, 0) > 0:
             negative_sentiment = sum(
-                market.agents[neighbor].holdings.get(coin.coinname, 0) == 0 for neighbor in neighbors) / len(neighbors)
+                market.agents[neighbor].holdings.get(coin.name, 0) == 0 for neighbor in neighbors) / len(neighbors)
             if negative_sentiment > self.negative_sentiment_threshold:
-                self.sell(coin, self.holdings[coin.coinname])
-                if coin.coinname in self.average_buy_prices:
-                    del self.average_buy_prices[coin.coinname]
+                self.sell(coin, self.holdings[coin.name])
+                if coin.name in self.average_buy_prices:
+                    del self.average_buy_prices[coin.name]
 
     def get_type(self):
         return "LinearHerdingAgent"
@@ -155,7 +155,7 @@ class BudgetProportionHerdingAgent(Agent):
 
         # Calculate the total value of the coin held by all neighbors
         total_neighbor_coin_value = sum(
-            market.agents[neighbor].holdings.get(coin.coinname, 0) * coin.price for neighbor in neighbors)
+            market.agents[neighbor].holdings.get(coin.name, 0) * coin.price for neighbor in neighbors)
 
         # Calculate the total budget of all neighbors
         total_neighbor_budget = sum(market.agents[neighbor].budget for neighbor in neighbors)
@@ -163,31 +163,30 @@ class BudgetProportionHerdingAgent(Agent):
         # Calculate the collective investment proportion of the neighborhood
         neighborhood_investment_proportion = total_neighbor_coin_value / total_neighbor_budget
 
-        print(neighborhood_investment_proportion)
 
-        if self.holdings.get(coin.coinname, 0) == 0 and neighborhood_investment_proportion >= self.buy_threshold:
+        if self.holdings.get(coin.name, 0) == 0 and neighborhood_investment_proportion >= self.buy_threshold:
             max_affordable = self.budget // coin.price
             buy_amount = int(max_affordable * self.initial_buy_proportion)
             self.buy(coin, buy_amount)
-            self.average_buy_prices[coin.coinname] = coin.price
+            self.average_buy_prices[coin.name] = coin.price
 
-        if self.holdings.get(coin.coinname, 0) > 0 and coin.coinname in self.average_buy_prices:
-            current_profit = coin.price / self.average_buy_prices[coin.coinname]
+        if self.holdings.get(coin.name, 0) > 0 and coin.name in self.average_buy_prices:
+            current_profit = coin.price / self.average_buy_prices[coin.name]
             sell_probability = (1 - neighborhood_investment_proportion) * (
                         current_profit / (self.profit_threshold * self.price_sensitivity)) + \
                                (neighborhood_investment_proportion) * (current_profit - self.profit_threshold) / (
                                            current_profit + 1)
             if random.random() < sell_probability:
-                self.sell(coin, self.holdings[coin.coinname])
-                del self.average_buy_prices[coin.coinname]
+                self.sell(coin, self.holdings[coin.name])
+                del self.average_buy_prices[coin.name]
 
-        if self.holdings.get(coin.coinname, 0) > 0:
+        if self.holdings.get(coin.name, 0) > 0:
             negative_sentiment = sum(
-                market.agents[neighbor].holdings.get(coin.coinname, 0) == 0 for neighbor in neighbors) / len(neighbors)
+                market.agents[neighbor].holdings.get(coin.name, 0) == 0 for neighbor in neighbors) / len(neighbors)
             if negative_sentiment > self.negative_sentiment_threshold:
-                self.sell(coin, self.holdings[coin.coinname])
-                if coin.coinname in self.average_buy_prices:
-                    del self.average_buy_prices[coin.coinname]
+                self.sell(coin, self.holdings[coin.name])
+                if coin.name in self.average_buy_prices:
+                    del self.average_buy_prices[coin.name]
 
     def get_type(self):
         return "BudgetProportionHerdingAgent"

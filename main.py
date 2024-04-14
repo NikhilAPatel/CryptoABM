@@ -1,26 +1,24 @@
 import os
-import random
-import matplotlib.pyplot as plt
-import networkx as nx
-import numpy as np
-from Agent import *
 import imageio
+import matplotlib.pyplot as plt
 from tqdm import tqdm
-import scipy as sp
+from Agent import *
+from Airdrop import *
 from CPN import *
 
 class Cryptocurrency:
     def __init__(self, name, initial_price, ismeme):
-        self.coinname = name
+        self.name = name
         self.price = initial_price
         self.initial_price = initial_price
-        self.ismeme = ismeme
+        self.is_meme = ismeme
 
 
 class CryptoMarket:
-    def __init__(self, num_agents, network_type, initial_coins, airdrop_percentage, airdrop_amount, num_rational_agents):
-        self.descriptor_string = f"{num_agents} agents, {num_rational_agents} rational - {airdrop_percentage}% airdrop"
+    def __init__(self, num_agents, network_type, initial_coins, airdrop_strategy, num_rational_agents):
+        self.descriptor_string = f"{num_agents} agents, {num_rational_agents} rational - {airdrop_strategy.get_descriptor()}"
         self.network_type = network_type
+        self.airdrop_strategy = airdrop_strategy
         id_generator = IDGenerator(num_agents)
         num_herding_agents = num_agents - num_rational_agents
         self.agents = ([RationalAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
@@ -31,9 +29,6 @@ class CryptoMarket:
         self.coins = initial_coins
         self.network = self.create_network()
         self.agent_types = {'RationalAgent': num_rational_agents, 'BudgetProportionHerdingAgent': num_herding_agents}
-
-        for coin in self.coins:
-            self.airdrop(random.choices(self.agents, k=int(len(self.agents) * airdrop_percentage)), coin, airdrop_amount)
 
     def create_network(self):
         if self.network_type == 'random':
@@ -69,48 +64,50 @@ class CryptoMarket:
 
     def get_coin_price(self, coin_name):
         for coin in self.coins:
-            if coin.coinname == coin_name:
+            if coin.name == coin_name:
                 return coin.price
         return None
 
     def set_coin_price(self, coin_name, new_price):
         for coin in self.coins:
-            if coin.coinname == coin_name:
+            if coin.name == coin_name:
                 coin.price = new_price
                 break
 
-    def airdrop(self, agents, coin, amount):
-        for agent in agents:
-            agent.holdings[coin.coinname] = agent.holdings.get(coin.coinname, 0) + amount
-            agent.average_buy_prices[coin] = 0
-
     def simulate(self, num_iterations):
-        price_histories = {coin.coinname: [coin.price] for coin in self.coins}
+        price_histories = {coin.name: [coin.price] for coin in self.coins}
         network_states = []
-        net_trade_volume_histories = {coin.coinname: [] for coin in self.coins}
-        holdings_histories = {coin.coinname: {agent_type: [0] * (num_iterations + 1) for agent_type in self.agent_types}
+        net_trade_volume_histories = {coin.name: [] for coin in self.coins}
+
+        holdings_histories = {coin.name: {agent_type: [0] * (num_iterations + 1) for agent_type in self.agent_types}
                               for coin in self.coins}
 
-        for coin in self.coins:
-            for agent in self.agents:
-                if agent.holdings.get(coin.coinname, 0) > 0:
-                    holdings_histories[coin.coinname][agent.get_type()][0] += 1
-
         for t in tqdm(range(num_iterations)):
+            #Execute the airdrop when needed
+            if int(self.airdrop_strategy.time * num_iterations)==t:
+                self.airdrop_strategy.do_airdrop(market)
+                #if we did an airdrop on the first iteration, lets update the holdings history just as a special exception
+                if t==0:
+                    for coin in self.coins:
+                        for agent in self.agents:
+                            if agent.holdings.get(coin.name, 0) > 0:
+                                holdings_histories[coin.name][agent.get_type()][0] += 1
+
+
             for coin in self.coins:
                 agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
                 random.shuffle(self.agents)
                 trade_volume = 0
 
                 for agent in self.agents:
-                    initial_holdings = agent.holdings.get(coin.coinname, 0)
+                    initial_holdings = agent.holdings.get(coin.name, 0)
                     initial_budget = agent.budget
                     agent.act(self, coin)
 
-                    if agent.holdings.get(coin.coinname, 0) > 0:
+                    if agent.holdings.get(coin.name, 0) > 0:
                         agent_holding_metrics[agent.get_type()] += 1
 
-                    change_in_holdings = agent.holdings.get(coin.coinname, 0) - initial_holdings
+                    change_in_holdings = agent.holdings.get(coin.name, 0) - initial_holdings
                     change_in_budget = agent.budget - initial_budget
 
                     if change_in_holdings > 0:
@@ -124,15 +121,15 @@ class CryptoMarket:
                         price_change_factor = max(0, 1 - (sold / (earned / coin.price)) * 0.05)
                         coin.price *= price_change_factor
 
-                    coin.price = max(coin.price, coin.initial_price * 0.01)
+                    coin.price = max(coin.price, coin.initial_price * 0.01) #enforce a minimum price for the coin
                     trade_volume += change_in_holdings
 
-                price_histories[coin.coinname].append(coin.price)
+                price_histories[coin.name].append(coin.price)
                 for agent_type in self.agent_types:
-                    holdings_histories[coin.coinname][agent_type][t + 1] = agent_holding_metrics[agent_type]
-                color_map = ['green' if agent.holdings.get(coin.coinname, 0) > 0 else 'grey' for agent in self.agents]
+                    holdings_histories[coin.name][agent_type][t + 1] = agent_holding_metrics[agent_type]
+                color_map = ['green' if agent.holdings.get(coin.name, 0) > 0 else 'grey' for agent in self.agents]
                 network_states.append(color_map)
-                net_trade_volume_histories[coin.coinname].append(trade_volume)
+                net_trade_volume_histories[coin.name].append(trade_volume)
 
         return price_histories, holdings_histories, network_states, net_trade_volume_histories
 
@@ -143,23 +140,23 @@ class CryptoMarket:
             fig, axs = plt.subplots(4, 1, figsize=(12, 24), gridspec_kw={'height_ratios': [1, num_coins, 1, 2]})
 
         for coin in self.coins:
-            axs[0].plot(price_histories[coin.coinname], label=coin.coinname)
+            axs[0].plot(price_histories[coin.name], label=coin.name)
         axs[0].set_xlabel('Iteration')
         axs[0].set_ylabel('Price')
         axs[0].set_title('Cryptocurrency Price Simulation')
         axs[0].legend()
 
         for i, coin in enumerate(self.coins):
-            for agent_type, holdings in holdings_histories[coin.coinname].items():
-                axs[1].plot(holdings, label=f'{coin.coinname} - {agent_type} Holdings')
+            for agent_type, holdings in holdings_histories[coin.name].items():
+                axs[1].plot(holdings, label=f'{coin.name} - {agent_type} Holdings')
             axs[1].set_xlabel('Iteration')
             axs[1].set_ylabel('Number of Agents Holding')
             axs[1].set_title('Number of Agents Holding by Agent Type')
             axs[1].legend()
 
         for coin in self.coins:
-            axs[2].bar(range(len(net_trade_volume_histories[coin.coinname])), net_trade_volume_histories[coin.coinname],
-                       alpha=0.5, label=f'{coin.coinname} Net Trade Volume')
+            axs[2].bar(range(len(net_trade_volume_histories[coin.name])), net_trade_volume_histories[coin.name],
+                       alpha=0.5, label=f'{coin.name} Net Trade Volume')
         axs[2].set_xlabel('Iteration')
         axs[2].set_ylabel('Net Trade Volume')
         axs[2].set_title('Net Trade Volume Over Time')
@@ -208,12 +205,15 @@ class CryptoMarket:
 
 # Example usage
 btc = Cryptocurrency('Bitcoin', 1.00, ismeme=False)
-# eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
+eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', 0.25, ismeme=True)
 
-market = CryptoMarket(num_agents=100, network_type='core_periphery', initial_coins=[btc],
-                      airdrop_percentage=0.5, airdrop_amount=10000, num_rational_agents=50)
+random_airdrop_strategy = RandomAirdropStrategy(btc, 0.5, 1000, 0)
+leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
+
+market = CryptoMarket(num_agents=1000, network_type='core_periphery', initial_coins=[btc],
+                      airdrop_strategy=leader_airdrop_strategy, num_rational_agents=50)
 price_histories, holdings_histories, network_states, net_trade_volume_histories = market.simulate(100)
-market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=True)
+market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=False)
 for coin in market.coins:
-    print(f"Final {coin.coinname} Price: {price_histories[coin.coinname][-1]}")
+    print(f"Final {coin.name} Price: {price_histories[coin.name][-1]}")
