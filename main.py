@@ -9,7 +9,6 @@ from tqdm import tqdm
 import scipy as sp
 from CPN import *
 
-
 class Cryptocurrency:
     def __init__(self, name, initial_price, ismeme):
         self.coinname = name
@@ -19,21 +18,22 @@ class Cryptocurrency:
 
 
 class CryptoMarket:
-    def __init__(self, num_agents, network_type, initial_coins, airdrop_percentage, num_rational_agents):
+    def __init__(self, num_agents, network_type, initial_coins, airdrop_percentage, airdrop_amount, num_rational_agents):
+        self.descriptor_string = f"{num_agents} agents, {num_rational_agents} rational - {airdrop_percentage}% airdrop"
         self.network_type = network_type
         id_generator = IDGenerator(num_agents)
         num_herding_agents = num_agents - num_rational_agents
         self.agents = ([RationalAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
                         range(num_rational_agents)] +
-                       [LinearHerdingAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
+                       [BudgetProportionHerdingAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
                         range(num_herding_agents)])
         random.shuffle(self.agents)
         self.coins = initial_coins
         self.network = self.create_network()
-        self.agent_types = {'RationalAgent': num_rational_agents, 'LinearHerdingAgent': num_herding_agents}
+        self.agent_types = {'RationalAgent': num_rational_agents, 'BudgetProportionHerdingAgent': num_herding_agents}
 
         for coin in self.coins:
-            self.airdrop(random.choices(self.agents, k=int(len(self.agents) * airdrop_percentage)), coin, 100)
+            self.airdrop(random.choices(self.agents, k=int(len(self.agents) * airdrop_percentage)), coin, airdrop_amount)
 
     def create_network(self):
         if self.network_type == 'random':
@@ -82,6 +82,7 @@ class CryptoMarket:
     def airdrop(self, agents, coin, amount):
         for agent in agents:
             agent.holdings[coin.coinname] = agent.holdings.get(coin.coinname, 0) + amount
+            agent.average_buy_prices[coin] = 0
 
     def simulate(self, num_iterations):
         price_histories = {coin.coinname: [coin.price] for coin in self.coins}
@@ -168,7 +169,9 @@ class CryptoMarket:
             self.draw_network(axs[3])
             axs[3].set_title('Network Structure of Agents')
 
+        fig.suptitle(self.descriptor_string)
         plt.tight_layout()
+        fig.subplots_adjust(top=0.90)
         plt.show()
     def draw_network(self, ax):
         color_map = []
@@ -208,8 +211,8 @@ btc = Cryptocurrency('Bitcoin', 1.00, ismeme=False)
 # eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', 0.25, ismeme=True)
 
-market = CryptoMarket(num_agents=100, network_type='directed_multiple_core_periphery', initial_coins=[btc, wif],
-                      airdrop_percentage=0.9, num_rational_agents=50)
+market = CryptoMarket(num_agents=1000, network_type='multiple_core_periphery', initial_coins=[btc],
+                      airdrop_percentage=.75, airdrop_amount=10000, num_rational_agents=500)
 price_histories, holdings_histories, network_states, net_trade_volume_histories = market.simulate(100)
 market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=False)
 for coin in market.coins:
