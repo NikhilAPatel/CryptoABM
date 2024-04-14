@@ -68,3 +68,60 @@ def create_directed_core_periphery_network(num_agents, core_percent=0.2, core_to
                 G.add_edge(i, j)
 
     return G
+
+
+def create_multiple_core_periphery_networks(total_agents, networks_count, interlink_probability, directed=False):
+    # Assume an equal number of agents per network for simplicity
+    agents_per_network = total_agents // networks_count
+
+    # Function to create a single core-periphery network based on the directed flag
+    def create_network(agents_count):
+        if directed:
+            return create_directed_core_periphery_network(agents_count)
+        else:
+            return create_core_periphery_network(agents_count)
+
+    # Create individual core-periphery networks
+    networks = [create_network(agents_per_network) for _ in range(networks_count)]
+
+    # Initialize one large graph to contain all individual networks
+    if directed:
+        large_network = nx.DiGraph()
+    else:
+        large_network = nx.Graph()
+
+    # Add individual networks to the large graph
+    offset = 0
+    for net in networks:
+        # Relabel nodes to ensure unique identifiers across the entire large network
+        mapping = {i: i + offset for i in net.nodes()}
+        relabeled_net = nx.relabel_nodes(net, mapping)
+        large_network = nx.compose(large_network, relabeled_net)
+
+        # Increment offset for the next network
+        offset += agents_per_network
+
+    # Link the networks together
+    # For each network, try to link its core nodes to core nodes of other networks
+    for i in range(networks_count):
+        core_nodes_i = range(i * agents_per_network, i * agents_per_network + int(agents_per_network * 0.2))
+
+        for j in range(networks_count):
+            if i != j:
+                core_nodes_j = range(j * agents_per_network, j * agents_per_network + int(agents_per_network * 0.2))
+
+                # Randomly establish inter-core links based on the specified probability
+                for node_i in core_nodes_i:
+                    for node_j in core_nodes_j:
+                        if random.random() < interlink_probability:
+                            if directed:
+                                # For directed, the link direction can also be randomized or set to a specific direction
+                                if random.random() < 0.5:
+                                    large_network.add_edge(node_i, node_j)
+                                else:
+                                    large_network.add_edge(node_j, node_i)
+                            else:
+                                large_network.add_edge(node_i, node_j)
+
+    return large_network
+

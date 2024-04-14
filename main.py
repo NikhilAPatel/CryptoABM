@@ -56,7 +56,12 @@ class CryptoMarket:
             return create_directed_core_periphery_network(len(self.agents), core_percent=0.2, core_to_core_prob=0.5,
                                            core_to_periphery_prob=0.5, periphery_to_periphery_prob=0.1,
                                            periphery_to_core_prob=0.01)
-
+        elif self.network_type == "multiple_core_periphery":
+            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5,
+                                                                    interlink_probability=0.01, directed=False)
+        elif self.network_type == "directed_multiple_core_periphery":
+            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5,
+                                                                    interlink_probability=0.01, directed=True)
 
     def get_coin_price(self, coin_name):
         return self.coin.price
@@ -203,7 +208,7 @@ class CryptoMarket:
 btc = Cryptocurrency('CryptoCoin', 1.00, ismeme=False)
 
 # Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
-market = CryptoMarket(num_agents=100, network_type = 'directed_core_periphery', initial_coin=btc, airdrop_percentage=0.3, num_rational_agents=30)
+market = CryptoMarket(num_agents=100, network_type = 'directed_multiple_core_periphery', initial_coin=btc, airdrop_percentage=0.3, num_rational_agents=30)
 price_history, holdings_history, network_states, net_trade_volume_history = market.simulate(100)
 market.plot_price_history(price_history, holdings_history, net_trade_volume_history, show_graph=True)
 print(f"Final Price: {price_history[-1]}")
