@@ -2,19 +2,6 @@ import random
 import networkx as nx
 import numpy as np
 
-
-class IDGenerator:
-    def __init__(self, num_agents):
-        self.available_ids = list(range(num_agents))
-
-    def get_next_id(self):
-        if not self.available_ids:
-            raise Exception("No more IDs available.")
-        chosen_id = random.choice(self.available_ids)
-        self.available_ids.remove(chosen_id)
-        return chosen_id
-
-
 class Agent:
     def __init__(self, id, budget):
         self.id = id

@@ -27,7 +27,7 @@ class AirdropStrategy(ABC):
         pass
 
     def get_descriptor(self):
-        return f"{self.get_type()}({self.percentage * 100}% {self.amount})"
+        return f"{self.get_type()}({self.coin.name} {self.percentage * 100}% {self.amount})"
 
     def do_airdrop(self, market):
         recipients = self.select_recipients(market)
@@ -96,4 +96,4 @@ class BiggestHoldersAirdropStrategy(AirdropStrategy):
         return "BiggestHoldersAirdropStrategy"
 
     def get_descriptor(self):
-        return f"{self.get_type()}({self.percentage * 100}% {self.amount} to {self.existing_coin.name})"
+        return f"{self.get_type()}({self.coin.name} {self.percentage * 100}% {self.amount} to {self.existing_coin.name})"

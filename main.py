@@ -1,10 +1,13 @@
 import os
+from textwrap import wrap
+
 import imageio
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from Agent import *
 from Airdrop import *
 from CPN import *
+from AgentStructure import AgentStructure
 
 class Cryptocurrency:
     def __init__(self, name, initial_price, ismeme):
@@ -15,20 +18,14 @@ class Cryptocurrency:
 
 
 class CryptoMarket:
-    def __init__(self, num_agents, network_type, initial_coins, airdrop_strategies, num_rational_agents):
-        self.descriptor_string = f"{num_agents} agents, {num_rational_agents} rational - {[airdrop_strategy.get_descriptor() for airdrop_strategy in airdrop_strategies]}"
+    def __init__(self, network_type, initial_coins, airdrop_strategies, agent_structure):
+        self.agents = agent_structure.agents
+        self.agent_types = agent_structure.agent_types
+        self.descriptor_string = f"{network_type}: {agent_structure.get_descriptor()} - {[airdrop_strategy.get_descriptor() for airdrop_strategy in airdrop_strategies]}"
         self.network_type = network_type
         self.airdrop_strategies = airdrop_strategies
-        id_generator = IDGenerator(num_agents)
-        num_herding_agents = num_agents - num_rational_agents
-        self.agents = ([RationalAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
-                        range(num_rational_agents)] +
-                       [LinearHerdingAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
-                        range(num_herding_agents)])
-        random.shuffle(self.agents)
         self.coins = initial_coins
         self.network = self.create_network()
-        self.agent_types = {'RationalAgent': num_rational_agents, 'LinearHerdingAgent': num_herding_agents}
 
     def create_network(self):
         if self.network_type == 'random':
@@ -167,7 +164,7 @@ class CryptoMarket:
             self.draw_network(axs[3])
             axs[3].set_title('Network Structure of Agents')
 
-        fig.suptitle(self.descriptor_string)
+        fig.suptitle("\n".join(wrap(self.descriptor_string)))
         plt.tight_layout()
         fig.subplots_adjust(top=0.90)
         plt.show()
@@ -213,8 +210,13 @@ random_airdrop_strategy = RandomAirdropStrategy(btc, 0.5, 1000, 0)
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
 wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, .5, 10000, .5, btc)
 
-market = CryptoMarket(num_agents=1000, network_type='core_periphery', initial_coins=[btc, wif],
-                      airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], num_rational_agents=50)
+agent_structure = AgentStructure(1000)
+agent_structure.add_agents(RationalAgent, 50)
+agent_structure.add_agents(LinearHerdingAgent, 950)
+
+market = CryptoMarket(network_type='core_periphery', initial_coins=[btc, wif],
+                      airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
+
 price_histories, holdings_histories, network_states, net_trade_volume_histories = market.simulate(100)
 market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=False)
 for coin in market.coins:
