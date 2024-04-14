@@ -56,7 +56,7 @@ class RationalAgent(Agent):
         # Calculate a fair value based on the initial price and some Gaussian noise
         # The std deviation here is arbitrary and can be adjusted for different market volatilities
         self.fair_value = np.random.normal(initial_price, initial_price * 0.1)
-        self.fair_value =2
+        self.fair_value = 1
 
     def act(self, market):
         coin = market.coin
@@ -85,38 +85,65 @@ class RationalAgent(Agent):
         return "RationalAgent"
 
 
-class HerdingAgent(Agent):
-    #TODO even herding agents want to take profits sometimes
-    #TODO they shoyilkd also buy more than 1 coin at a time
+class LinearHerdingAgent(Agent):
+    """
+    A type of agent that seeks to trade based on sentiment. When instantiated, it comes up with
+    a neighbor proportion threshold above which it will buy the coin. The agent will put a random percent of its net worth between 0.05-.05
+    into the coin.
+    """
+    def __init__(self, budget, threshold=None, profit_threshold=None, price_sensitivity=None, negative_sentiment_threshold = None):
+        super().__init__(budget)
+        self.threshold = threshold if threshold is not None else random.uniform(0.3, 0.7)
+        self.profit_threshold = profit_threshold if profit_threshold is not None else random.uniform(1.2, 2.0)
+        self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
+        self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(0.5, 0.8)
+        self.initial_buy_proportion = random.uniform(0.05, 0.2)
+        self.average_buy_price = None
+
     def act(self, market):
         coin = market.coin
 
-        # Buying based on herding behavior...
-        # Adjusting for directed networks: consider only incoming neighbors (predecessors)
+        # Determine neighbors based on the network type
         if isinstance(market.network, nx.DiGraph):
             neighbors = list(market.network.predecessors(self.id))
         else:
             neighbors = list(market.network[self.id])
 
-        #TODO we just return if this guy has no neihbors but maybe this should be handled differently later
+        #TODO right now we just do nothing if this guy has no neighbors. Is this moral?
         if not neighbors:
             return
 
-        # Herd behavior: buy if the majority of neighbors have this coin
-        if sum(market.agents[neighbor].holdings > 0 for neighbor in neighbors) / len(
-                neighbors) > 0.5:
-            self.buy(coin, 1)
-            # print(f"buying {1} @ {coin.price}")
+        # Calculate the proportion of neighbors holding the coin
+        neighbor_holdings_proportion = sum(market.agents[neighbor].holdings > 0 for neighbor in neighbors) / len(neighbors)
+
+        # Buy based on the initial buy proportion if not holding the coin
+        if self.holdings == 0 and neighbor_holdings_proportion >= self.threshold:
+            max_affordable = self.budget // coin.price
+            buy_amount = int(max_affordable * self.initial_buy_proportion)
+            self.buy(coin, buy_amount)
+            self.average_buy_price = coin.price
+
+        # Buy additional coins if more neighbors start holding
+        # elif self.holdings > 0 and neighbor_holdings_proportion > self.threshold:
+        #     max_affordable = self.budget // coin.price
+        #     buy_amount = int(max_affordable * 0.1)  # Buy an additional 10% of affordable coins
+        #     self.buy(coin, buy_amount)
+        #     self.average_buy_price = (self.average_buy_price * (self.holdings - buy_amount) + coin.price * buy_amount) / self.holdings
+
+        # Consider profit-taking based on neighbor proportion and price changes
+        if self.holdings > 0 and self.average_buy_price is not None:
+            current_profit = coin.price / self.average_buy_price
+            sell_probability = (1 - neighbor_holdings_proportion) * (current_profit / self.profit_threshold) * self.price_sensitivity
+            if random.random() < sell_probability:
+                self.sell(coin, self.holdings)  # Sell all holdings
+                self.average_buy_price = None
 
         # Sell based on negative sentiment among neighbors
         if self.holdings > 0:
-            negative_sentiment = sum(
-                market.agents[neighbor].holdings <= 0
-                for neighbor in neighbors
-            ) / len(neighbors) > 0.5
-            if negative_sentiment:
-                self.sell(coin, self.holdings)  # Sell all
-                # print(f"selling {self.holdings} @ {coin.price}")
+            negative_sentiment = sum(market.agents[neighbor].holdings == 0 for neighbor in neighbors) / len(neighbors)
+            if negative_sentiment > self.negative_sentiment_threshold:
+                self.sell(coin, self.holdings)  # Sell all holdings
+                self.average_buy_price = None
 
     def get_type(self):
-        return "HerdingAgent"
+        return "LinearHerdingAgent"
