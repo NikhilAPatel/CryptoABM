@@ -7,7 +7,7 @@ from Agent import *
 import imageio
 from tqdm import tqdm
 import scipy as sp
-from CPN import create_core_periphery_network
+from CPN import *
 
 class Cryptocurrency:
     def __init__(self, name, initial_price, ismeme):
@@ -52,6 +52,10 @@ class CryptoMarket:
             return nx.watts_strogatz_graph(len(self.agents), 4, 0.1, directed=True)
         elif self.network_type == "core_periphery":
             return create_core_periphery_network(len(self.agents), core_percent = 0.1, core_connected_prob = 0.8, periphery_connected_prob = 0.01)
+        elif self.network_type == "directed_core_periphery":
+            return create_directed_core_periphery_network(len(self.agents), core_percent=0.2, core_to_core_prob=0.5,
+                                           core_to_periphery_prob=0.5, periphery_to_periphery_prob=0.1,
+                                           periphery_to_core_prob=0.01)
 
 
     def get_coin_price(self, coin_name):
@@ -199,7 +203,7 @@ class CryptoMarket:
 btc = Cryptocurrency('CryptoCoin', 1.00, ismeme=False)
 
 # Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
-market = CryptoMarket(num_agents=100, network_type = 'core_periphery', initial_coin=btc, airdrop_percentage=0.3, num_rational_agents=30)
+market = CryptoMarket(num_agents=100, network_type = 'directed_core_periphery', initial_coin=btc, airdrop_percentage=0.3, num_rational_agents=30)
 price_history, holdings_history, network_states, net_trade_volume_history = market.simulate(100)
 market.plot_price_history(price_history, holdings_history, net_trade_volume_history, show_graph=True)
 print(f"Final Price: {price_history[-1]}")
