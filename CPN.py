@@ -70,7 +70,16 @@ def create_directed_core_periphery_network(num_agents, core_percent=0.2, core_to
     return G
 
 
+
 def create_multiple_core_periphery_networks(total_agents, networks_count, interlink_probability, directed=False):
+    """
+    Creates multiple core periphery networks joined together mostly through cores. Important hyperparameter is the number of networks
+    :param total_agents:
+    :param networks_count:
+    :param interlink_probability:
+    :param directed:
+    :return:
+    """
     # Assume an equal number of agents per network for simplicity
     agents_per_network = total_agents // networks_count
 

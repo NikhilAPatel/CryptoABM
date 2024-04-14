@@ -3,18 +3,27 @@ import random
 import networkx as nx
 import numpy as np
 
-class IDGenerator:#TODO actually this should return a random unassigned id from [0, numagents] i think this is because some graphs build iteraively wioth the first few agents very well connected
-    current_id = -1
+import random
 
-    @classmethod
-    def get_next_id(cls):
-        cls.current_id += 1
-        return cls.current_id
+
+class IDGenerator:
+    def __init__(self, num_agents):
+        # Initialize a list of available IDs from 0 to num_agents-1
+        self.available_ids = list(range(num_agents))
+
+    def get_next_id(self):
+        if not self.available_ids:
+            raise Exception("No more IDs available.")
+        # Randomly select an ID from the list of available IDs
+        chosen_id = random.choice(self.available_ids)
+        # Remove the chosen ID from the list of available IDs
+        self.available_ids.remove(chosen_id)
+        return chosen_id
 
 
 class Agent:
-    def __init__(self, budget):
-        self.id = IDGenerator.get_next_id()
+    def __init__(self, id, budget):
+        self.id = id
         self.budget = budget
         self.holdings = 0
 
@@ -39,7 +48,7 @@ class Agent:
         pass  # To be defined by subclasses
 
     def get_type(self):
-        pass # to be defined by subclasses
+        pass  # to be defined by subclasses
 
 
 class RationalAgent(Agent):
@@ -48,8 +57,9 @@ class RationalAgent(Agent):
     a rational determination for the fair market value of a coin. The agent will simply buy below this
     value and attempt to sell above it. This agent will not engage in trading memecoins.
     """
-    def __init__(self, budget):
-        super().__init__( budget)
+
+    def __init__(self, id, budget):
+        super().__init__(id, budget)
         self.fair_value = None  # Will be set when the first coin is encountered
 
     def determine_fair_value(self, initial_price):
@@ -72,7 +82,7 @@ class RationalAgent(Agent):
         if coin.price < self.fair_value:
             # Spend a random proportion of available budget to buy coins
             max_affordable = self.budget // coin.price
-            buy_amount = random.randint(1, int(max(max_affordable, 1)*0.2)) #Will only spend 20% of money at once
+            buy_amount = random.randint(1, int(max(max_affordable, 1) * 0.2))  # Will only spend 20% of money at once
             # print(f"buying {buy_amount} @ {coin.price}")
             self.buy(coin, buy_amount)
         elif coin.price > self.fair_value and self.holdings > 0:
@@ -91,12 +101,15 @@ class LinearHerdingAgent(Agent):
     a neighbor proportion threshold above which it will buy the coin. The agent will put a random percent of its net worth between 0.05-.05
     into the coin.
     """
-    def __init__(self, budget, threshold=None, profit_threshold=None, price_sensitivity=None, negative_sentiment_threshold = None):
-        super().__init__(budget)
+
+    def __init__(self, id, budget, threshold=None, profit_threshold=None, price_sensitivity=None,
+                 negative_sentiment_threshold=None):
+        super().__init__(id, budget)
         self.threshold = threshold if threshold is not None else random.uniform(0.3, 0.7)
         self.profit_threshold = profit_threshold if profit_threshold is not None else random.uniform(1.2, 2.0)
         self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
-        self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(0.5, 0.8)
+        self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(
+            0.5, 0.8)
         self.initial_buy_proportion = random.uniform(0.05, 0.2)
         self.average_buy_price = None
 
@@ -109,12 +122,13 @@ class LinearHerdingAgent(Agent):
         else:
             neighbors = list(market.network[self.id])
 
-        #TODO right now we just do nothing if this guy has no neighbors. Is this moral?
+        # TODO right now we just do nothing if this guy has no neighbors. Is this moral?
         if not neighbors:
             return
 
         # Calculate the proportion of neighbors holding the coin
-        neighbor_holdings_proportion = sum(market.agents[neighbor].holdings > 0 for neighbor in neighbors) / len(neighbors)
+        neighbor_holdings_proportion = sum(market.agents[neighbor].holdings > 0 for neighbor in neighbors) / len(
+            neighbors)
 
         # Buy based on the initial buy proportion if not holding the coin
         if self.holdings == 0 and neighbor_holdings_proportion >= self.threshold:
@@ -133,7 +147,9 @@ class LinearHerdingAgent(Agent):
         # Consider profit-taking based on neighbor proportion and price changes
         if self.holdings > 0 and self.average_buy_price is not None:
             current_profit = coin.price / self.average_buy_price
-            sell_probability = (1 - neighbor_holdings_proportion) * (current_profit / self.profit_threshold) * self.price_sensitivity
+            #TODO look into sell logic
+            sell_probability = (1 - neighbor_holdings_proportion) * (current_profit / (self.profit_threshold * self.price_sensitivity)) + \
+                               (neighbor_holdings_proportion) * (current_profit - self.profit_threshold) / (current_profit + 1)
             if random.random() < sell_probability:
                 self.sell(coin, self.holdings)  # Sell all holdings
                 self.average_buy_price = None

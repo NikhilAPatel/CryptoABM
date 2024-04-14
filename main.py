@@ -20,9 +20,10 @@ class Cryptocurrency:
 class CryptoMarket:
     def __init__(self, num_agents, network_type, initial_coin, airdrop_percentage, num_rational_agents):
         self.network_type = network_type
+        id_generator = IDGenerator(num_agents)  # Initialize ID generator with the total number of agents
         num_herding_agents = num_agents - num_rational_agents
-        self.agents = ([RationalAgent(budget = random.randint(1000, 10000)) for i in range(num_rational_agents)] +
-                       [LinearHerdingAgent(random.randint(1000, 10000)) for i in range(num_herding_agents)])
+        self.agents = ([RationalAgent(id_generator.get_next_id(), budget = random.randint(1000, 10000)) for i in range(num_rational_agents)] +
+                       [LinearHerdingAgent(id_generator.get_next_id(), budget =random.randint(1000, 10000)) for i in range(num_herding_agents)])
         random.shuffle(self.agents)
         self.coin = initial_coin
         self.network = self.create_network()
@@ -208,7 +209,7 @@ class CryptoMarket:
 btc = Cryptocurrency('CryptoCoin', 1.00, ismeme=False)
 
 # Note: You would need to add the other agents to the market as well for a mixed-agent simulation.
-market = CryptoMarket(num_agents=100, network_type = 'directed_multiple_core_periphery', initial_coin=btc, airdrop_percentage=0.3, num_rational_agents=30)
+market = CryptoMarket(num_agents=100, network_type = 'directed_multiple_core_periphery', initial_coin=btc, airdrop_percentage=0.9, num_rational_agents=0)
 price_history, holdings_history, network_states, net_trade_volume_history = market.simulate(100)
 market.plot_price_history(price_history, holdings_history, net_trade_volume_history, show_graph=True)
 print(f"Final Price: {price_history[-1]}")
