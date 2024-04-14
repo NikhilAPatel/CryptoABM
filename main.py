@@ -15,10 +15,10 @@ class Cryptocurrency:
 
 
 class CryptoMarket:
-    def __init__(self, num_agents, network_type, initial_coins, airdrop_strategy, num_rational_agents):
-        self.descriptor_string = f"{num_agents} agents, {num_rational_agents} rational - {airdrop_strategy.get_descriptor()}"
+    def __init__(self, num_agents, network_type, initial_coins, airdrop_strategies, num_rational_agents):
+        self.descriptor_string = f"{num_agents} agents, {num_rational_agents} rational - {[airdrop_strategy.get_descriptor() for airdrop_strategy in airdrop_strategies]}"
         self.network_type = network_type
-        self.airdrop_strategy = airdrop_strategy
+        self.airdrop_strategies = airdrop_strategies
         id_generator = IDGenerator(num_agents)
         num_herding_agents = num_agents - num_rational_agents
         self.agents = ([RationalAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
@@ -84,14 +84,15 @@ class CryptoMarket:
 
         for t in tqdm(range(num_iterations)):
             #Execute the airdrop when needed
-            if int(self.airdrop_strategy.time * num_iterations)==t:
-                self.airdrop_strategy.do_airdrop(market)
-                #if we did an airdrop on the first iteration, lets update the holdings history just as a special exception
-                if t==0:
-                    for coin in self.coins:
-                        for agent in self.agents:
-                            if agent.holdings.get(coin.name, 0) > 0:
-                                holdings_histories[coin.name][agent.get_type()][0] += 1
+            for airdrop_strategy in self.airdrop_strategies:
+                if int(airdrop_strategy.time * num_iterations)==t:
+                    airdrop_strategy.do_airdrop(market)
+            #if we did an airdrop on the first iteration, lets update the holdings history just as a special exception
+            if t==0:
+                for coin in self.coins:
+                    for agent in self.agents:
+                        if agent.holdings.get(coin.name, 0) > 0:
+                            holdings_histories[coin.name][agent.get_type()][0] += 1
 
 
             for coin in self.coins:
@@ -206,13 +207,14 @@ class CryptoMarket:
 # Example usage
 btc = Cryptocurrency('Bitcoin', 1.00, ismeme=False)
 eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
-wif = Cryptocurrency('DogWifHat', 0.25, ismeme=True)
+wif = Cryptocurrency('DogWifHat', 2500, ismeme=True)
 
 random_airdrop_strategy = RandomAirdropStrategy(btc, 0.5, 1000, 0)
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
+wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, .2, 10000, .5, btc)
 
-market = CryptoMarket(num_agents=1000, network_type='core_periphery', initial_coins=[btc],
-                      airdrop_strategy=leader_airdrop_strategy, num_rational_agents=50)
+market = CryptoMarket(num_agents=1000, network_type='core_periphery', initial_coins=[btc, wif],
+                      airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], num_rational_agents=50)
 price_histories, holdings_histories, network_states, net_trade_volume_histories = market.simulate(100)
 market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=False)
 for coin in market.coins:
