@@ -23,12 +23,12 @@ class CryptoMarket:
         num_herding_agents = num_agents - num_rational_agents
         self.agents = ([RationalAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
                         range(num_rational_agents)] +
-                       [BudgetProportionHerdingAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
+                       [LinearHerdingAgent(id_generator.get_next_id(), budget=random.randint(1000, 10000)) for i in
                         range(num_herding_agents)])
         random.shuffle(self.agents)
         self.coins = initial_coins
         self.network = self.create_network()
-        self.agent_types = {'RationalAgent': num_rational_agents, 'BudgetProportionHerdingAgent': num_herding_agents}
+        self.agent_types = {'RationalAgent': num_rational_agents, 'LinearHerdingAgent': num_herding_agents}
 
     def create_network(self):
         if self.network_type == 'random':
@@ -207,11 +207,11 @@ class CryptoMarket:
 # Example usage
 btc = Cryptocurrency('Bitcoin', 1.00, ismeme=False)
 eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
-wif = Cryptocurrency('DogWifHat', 2500, ismeme=True)
+wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 
 random_airdrop_strategy = RandomAirdropStrategy(btc, 0.5, 1000, 0)
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
-wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, .2, 10000, .5, btc)
+wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, .5, 10000, .5, btc)
 
 market = CryptoMarket(num_agents=1000, network_type='core_periphery', initial_coins=[btc, wif],
                       airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], num_rational_agents=50)
