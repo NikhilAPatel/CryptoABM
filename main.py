@@ -211,9 +211,9 @@ btc = Cryptocurrency('Bitcoin', 1.00, ismeme=False)
 # eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', 0.25, ismeme=True)
 
-market = CryptoMarket(num_agents=1000, network_type='multiple_core_periphery', initial_coins=[btc],
-                      airdrop_percentage=.75, airdrop_amount=10000, num_rational_agents=500)
+market = CryptoMarket(num_agents=100, network_type='core_periphery', initial_coins=[btc],
+                      airdrop_percentage=0.5, airdrop_amount=10000, num_rational_agents=50)
 price_histories, holdings_histories, network_states, net_trade_volume_histories = market.simulate(100)
-market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=False)
+market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=True)
 for coin in market.coins:
     print(f"Final {coin.coinname} Price: {price_histories[coin.coinname][-1]}")

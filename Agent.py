@@ -133,12 +133,11 @@ class LinearHerdingAgent(Agent):
 
 
 class BudgetProportionHerdingAgent(Agent):
-    def __init__(self, id, budget, influence_threshold=None, buy_threshold=None, profit_threshold=None,
+    def __init__(self, id, budget, buy_threshold=None, profit_threshold=None,
                  price_sensitivity=None,
                  negative_sentiment_threshold=None):
         super().__init__(id, budget)
-        self.influence_threshold = influence_threshold if influence_threshold is not None else random.uniform(0.05, 0.2)
-        self.buy_threshold = buy_threshold if buy_threshold is not None else random.uniform(0.3, 0.7)
+        self.buy_threshold = buy_threshold if buy_threshold is not None else random.uniform(0.2, 0.5)
         self.profit_threshold = profit_threshold if profit_threshold is not None else random.uniform(1.2, 2.0)
         self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
         self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(
@@ -154,21 +153,19 @@ class BudgetProportionHerdingAgent(Agent):
         if not neighbors:
             return
 
-        # Calculate the total value of the coin held by each neighbor
-        neighbor_coin_values = {neighbor: market.agents[neighbor].holdings.get(coin.coinname, 0) * coin.price for
-                                neighbor in neighbors}
+        # Calculate the total value of the coin held by all neighbors
+        total_neighbor_coin_value = sum(
+            market.agents[neighbor].holdings.get(coin.coinname, 0) * coin.price for neighbor in neighbors)
 
-        # Calculate the proportion of each neighbor's budget invested in the coin
-        neighbor_investment_proportions = {neighbor: value / market.agents[neighbor].budget for neighbor, value in
-                                           neighbor_coin_values.items()}
+        # Calculate the total budget of all neighbors
+        total_neighbor_budget = sum(market.agents[neighbor].budget for neighbor in neighbors)
 
+        # Calculate the collective investment proportion of the neighborhood
+        neighborhood_investment_proportion = total_neighbor_coin_value / total_neighbor_budget
 
-        # Identify influential neighbors based on the proportion of their budget invested in the coin
-        influential_neighbors = [neighbor for neighbor in neighbors if
-                                 neighbor_investment_proportions[neighbor] >= self.influence_threshold]
-        influential_neighbor_proportion = len(influential_neighbors) / len(neighbors)
+        print(neighborhood_investment_proportion)
 
-        if self.holdings.get(coin.coinname, 0) == 0 and influential_neighbor_proportion >= self.buy_threshold:
+        if self.holdings.get(coin.coinname, 0) == 0 and neighborhood_investment_proportion >= self.buy_threshold:
             max_affordable = self.budget // coin.price
             buy_amount = int(max_affordable * self.initial_buy_proportion)
             self.buy(coin, buy_amount)
@@ -176,9 +173,9 @@ class BudgetProportionHerdingAgent(Agent):
 
         if self.holdings.get(coin.coinname, 0) > 0 and coin.coinname in self.average_buy_prices:
             current_profit = coin.price / self.average_buy_prices[coin.coinname]
-            sell_probability = (1 - influential_neighbor_proportion) * (
+            sell_probability = (1 - neighborhood_investment_proportion) * (
                         current_profit / (self.profit_threshold * self.price_sensitivity)) + \
-                               (influential_neighbor_proportion) * (current_profit - self.profit_threshold) / (
+                               (neighborhood_investment_proportion) * (current_profit - self.profit_threshold) / (
                                            current_profit + 1)
             if random.random() < sell_probability:
                 self.sell(coin, self.holdings[coin.coinname])
