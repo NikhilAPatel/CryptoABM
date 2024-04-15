@@ -79,8 +79,6 @@ class CryptoMarket:
         asset_allocation_data = []
 
         for t in tqdm(range(num_iterations)):
-            print()
-            print(t, self.coins[1].price)
             #Execute the airdrop when needed
             for airdrop_strategy in self.airdrop_strategies:
                 if int(airdrop_strategy.time * num_iterations)==t:
@@ -233,17 +231,19 @@ eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
-leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
+leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.9, 100, 0)
 wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.5, 10000, .5, btc)
 
 agent_structure = AgentStructure(1000)
-agent_structure.add_agents(RationalAgent, 300)
-agent_structure.add_agents(LinearHerdingAgent, 700)
+agent_structure.add_agents(RationalAgent, 100)
+agent_structure.add_agents(LinearHerdingAgent, 900)
 
-market = CryptoMarket(network_type='multiple_core_periphery', initial_coins=[btc, wif],
-                      airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
+market = CryptoMarket(network_type='scale_free', initial_coins=[btc],
+                      airdrop_strategies=[leader_airdrop_strategy], agent_structure = agent_structure)
 
 price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
-market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True)
+market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=False)
 for coin in market.coins:
     print(f"Final {coin.name} Price: {price_histories[coin.name][-1]}")
+
+# market.generate_images_and_gif(network_states)

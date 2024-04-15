@@ -82,13 +82,13 @@ class LinearHerdingAgent(Agent):
     def __init__(self, id, budget, threshold=None, profit_threshold=None, price_sensitivity=None,
                  negative_sentiment_threshold=None):
         super().__init__(id, budget)
-        self.threshold = threshold if threshold is not None else random.uniform(0.3, 0.7)
+        self.threshold = threshold if threshold is not None else random.uniform(0.5, 0.7)
         self.profit_threshold = profit_threshold if profit_threshold is not None else random.uniform(1.2, 2.0)
         self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
         self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(
-            0.7, 0.8)
+            0.5, 0.8)
         self.initial_buy_proportion = random.uniform(0.05, 0.2)
-        self.max_multiple = pareto.rvs(3, scale=10) #TODO look into a better distribution
+        self.max_multiple = pareto.rvs(10, scale=10) #TODO look into a better distribution
 
 
     def act(self, market, coin):
@@ -110,6 +110,7 @@ class LinearHerdingAgent(Agent):
             buy_amount = int(max_affordable * self.initial_buy_proportion)
             self.buy(coin, buy_amount)
             self.average_buy_prices[coin.name] = coin.price
+            print(f"initial buying cheese {self.average_buy_prices[coin.name], neighbor_holdings_proportion}")
         #Still buy some if you already own the coin and have some more money. But the amount you are willing to buy
         #decreases exponentially relative to the amount of money you have left
         elif neighbor_holdings_proportion >= self.threshold:
@@ -128,8 +129,8 @@ class LinearHerdingAgent(Agent):
                 self.buy(coin, buy_amount)
                 self.average_buy_prices[coin.name] = (self.average_buy_prices.get(coin.name,0) * current_holdings + coin.price * buy_amount) / (
                                                                  current_holdings + buy_amount)
-                if (coin.name == "DogWifHat"):
-                    print(f"buying cheese {self.average_buy_prices[coin.name]}")
+                # if (coin.name == "DogWifHat"):
+                print(f"buying cheese {self.average_buy_prices[coin.name]}")
 
 
         if self.holdings.get(coin.name, 0) > 0 and coin.name in self.average_buy_prices:
@@ -145,16 +146,16 @@ class LinearHerdingAgent(Agent):
                 if random.random() < sell_probability:
                     self.sell(coin, self.holdings[coin.name])
 
-                    if (coin.name == "DogWifHat"):
-                        print(f"Selling cheese for profit: {coin.price, self.average_buy_prices[coin.name], sell_probability}")
+                    # if (coin.name == "DogWifHat"):
+                    print(f"Selling cheese for profit: {coin.price, self.average_buy_prices[coin.name], sell_probability}")
 
 
-        elif self.holdings.get(coin.name, 0) > 0:
+        if self.holdings.get(coin.name, 0) > 0:
             negative_sentiment = sum(
                 market.agents[neighbor].holdings.get(coin.name, 0) == 0 for neighbor in neighbors) / len(neighbors)
             if negative_sentiment > self.negative_sentiment_threshold:
-                if(coin.name=="DogWifHat"):
-                    print(f"selliong cheese cause of sentiment {self.negative_sentiment_threshold, negative_sentiment, neighbor_holdings_proportion}")
+                # if(coin.name=="DogWifHat"):
+                print(f"selliong cheese cause of sentiment {self.negative_sentiment_threshold, negative_sentiment, neighbor_holdings_proportion}")
                 self.sell(coin, self.holdings[coin.name])
                 if coin.name in self.average_buy_prices:
                     del self.average_buy_prices[coin.name]
