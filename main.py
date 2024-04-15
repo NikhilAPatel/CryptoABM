@@ -238,17 +238,17 @@ cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
 random_airdrop_strategy = RandomAirdropStrategy(btc, 0.5, 1000, 0)
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
-wif_airdrop_strategy = LeaderAirdropStrategy(wif, 1, 10000, .5)
+wif_airdrop_strategy = LeaderAirdropStrategy(wif, 0.2, 10000, .5)
 cheese_airdrop_strategy = BiggestHoldersAirdropStrategy(cheese, 1, 10000, .1, btc)
 
 agent_structure = AgentStructure(100)
-agent_structure.add_agents(RationalAgent, 30)
-agent_structure.add_agents(BudgetProportionHerdingAgent, 70)
+# agent_structure.add_agents(RationalAgent, 0)
+agent_structure.add_agents(LinearHerdingAgent, 100)
 
-market = CryptoMarket(network_type='core_periphery', initial_coins=[btc, wif],
+market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
                       airdrop_strategies=[wif_airdrop_strategy], agent_structure = agent_structure)
 
 price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
-market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=False)
+market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True)
 for coin in market.coins:
     print(f"Final {coin.name} Price: {price_histories[coin.name][-1]}")

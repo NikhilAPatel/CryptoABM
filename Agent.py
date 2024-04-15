@@ -88,7 +88,7 @@ class LinearHerdingAgent(Agent):
         self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(
             0.7, 0.8)
         self.initial_buy_proportion = random.uniform(0.05, 0.2)
-        self.max_multiple = pareto.rvs(10, scale=10) #TODO look into a better distribution
+        self.max_multiple = pareto.rvs(3, scale=10) #TODO look into a better distribution
 
 
     def act(self, market, coin):
