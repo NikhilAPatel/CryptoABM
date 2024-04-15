@@ -33,7 +33,7 @@ class AirdropStrategy(ABC):
         recipients = self.select_recipients(market)
         for agent in recipients:
             agent.holdings[self.coin.name] = agent.holdings.get(self.coin.name, 0) + self.amount
-            agent.average_buy_prices[self.coin] = 0
+            agent.average_buy_prices[self.coin] = self.coin.price
 
 
 class RandomAirdropStrategy(AirdropStrategy):
