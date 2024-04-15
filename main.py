@@ -78,6 +78,7 @@ class CryptoMarket:
 
         holdings_histories = {coin.name: {agent_type: [0] * (num_iterations + 1) for agent_type in self.agent_types}
                               for coin in self.coins}
+        asset_allocation_data = []
 
         for t in tqdm(range(num_iterations)):
             #Execute the airdrop when needed
@@ -91,7 +92,7 @@ class CryptoMarket:
                         if agent.holdings.get(coin.name, 0) > 0:
                             holdings_histories[coin.name][agent.get_type()][0] += 1
 
-
+            timestep_data = {'cash': sum(agent.budget for agent in self.agents)}
             for coin in self.coins:
                 agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
                 random.shuffle(self.agents)
@@ -128,14 +129,17 @@ class CryptoMarket:
                 color_map = ['green' if agent.holdings.get(coin.name, 0) > 0 else 'grey' for agent in self.agents]
                 network_states.append(color_map)
                 net_trade_volume_histories[coin.name].append(trade_volume)
+                timestep_data[coin.name] = sum(agent.holdings.get(coin.name, 0) for agent in self.agents)
 
-        return price_histories, holdings_histories, network_states, net_trade_volume_histories
+            asset_allocation_data.append(timestep_data)
 
-    def plot_price_history(self, price_histories, holdings_histories, net_trade_volume_histories, show_graph=True):
+        return price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data
+
+    def plot_price_history(self, price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True):
         num_coins = len(self.coins)
-        fig, axs = plt.subplots(3, 1, figsize=(12, 12), gridspec_kw={'height_ratios': [1, num_coins, 1]})
+        fig, axs = plt.subplots(4, 1, figsize=(12, 16), gridspec_kw={'height_ratios': [1, num_coins, 1, 1]})
         if show_graph:
-            fig, axs = plt.subplots(4, 1, figsize=(12, 24), gridspec_kw={'height_ratios': [1, num_coins, 1, 2]})
+            fig, axs = plt.subplots(5, 1, figsize=(12, 30), gridspec_kw={'height_ratios': [1, num_coins, 1, 1, 2]})
 
         for coin in self.coins:
             axs[0].plot(price_histories[coin.name], label=coin.name)
@@ -160,9 +164,30 @@ class CryptoMarket:
         axs[2].set_title('Net Trade Volume Over Time')
         axs[2].legend()
 
+        asset_allocation = {'Uninvested Cash': []}
+        for coin in self.coins:
+            asset_allocation[coin.name] = []
+
+        for t in range(len(asset_allocation_data)):
+            total_wealth = asset_allocation_data[t]['cash']
+            for coin in self.coins:
+                total_wealth += asset_allocation_data[t][coin.name] * price_histories[coin.name][t]
+
+            asset_allocation['Uninvested Cash'].append(asset_allocation_data[t]['cash'] / total_wealth * 100)
+            for coin in self.coins:
+                asset_allocation[coin.name].append(
+                    asset_allocation_data[t][coin.name] * price_histories[coin.name][t] / total_wealth * 100)
+
+        for asset, allocation in asset_allocation.items():
+            axs[3].plot(allocation, label=asset)
+        axs[3].set_xlabel('Iteration')
+        axs[3].set_ylabel('Percentage of Total Wealth')
+        axs[3].set_title('Asset Allocation Over Time')
+        axs[3].legend()
+
         if show_graph:
-            self.draw_network(axs[3])
-            axs[3].set_title('Network Structure of Agents')
+            self.draw_network(axs[4])
+            axs[4].set_title('Network Structure of Agents')
 
         fig.suptitle("\n".join(wrap(self.descriptor_string)))
         plt.tight_layout()
@@ -217,7 +242,7 @@ agent_structure.add_agents(LinearHerdingAgent, 700)
 market = CryptoMarket(network_type='multiple_core_periphery', initial_coins=[btc, wif],
                       airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
 
-price_histories, holdings_histories, network_states, net_trade_volume_histories = market.simulate(100)
-market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=True)
+price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
+market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True)
 for coin in market.coins:
     print(f"Final {coin.name} Price: {price_histories[coin.name][-1]}")
