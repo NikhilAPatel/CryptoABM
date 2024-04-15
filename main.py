@@ -142,7 +142,8 @@ class CryptoMarket:
             fig, axs = plt.subplots(5, 1, figsize=(12, 30), gridspec_kw={'height_ratios': [1, num_coins, 1, 1, 2]})
 
         for coin in self.coins:
-            axs[0].plot(price_histories[coin.name], label=coin.name)
+            x_values = [i/len(self.agents) for i in range(len(price_histories[coin.name]))]
+            axs[0].plot(x_values, price_histories[coin.name], label=coin.name)
         axs[0].set_xlabel('Iteration')
         axs[0].set_ylabel('Price')
         axs[0].set_title('Cryptocurrency Price Simulation')
