@@ -97,6 +97,7 @@ class LinearHerdingAgent(Agent):
         else:
             neighbors = list(market.network[self.id])
 
+
         if not neighbors:
             return
 
@@ -194,14 +195,14 @@ class BudgetProportionHerdingAgent(Agent):
         # Calculate the collective investment proportion of the neighborhood
         neighborhood_investment_proportion = total_neighbor_coin_value / total_neighbor_budget
 
-        print(neighborhood_investment_proportion, self.buy_threshold)
+
         if self.holdings.get(coin.name, 0) == 0 and neighborhood_investment_proportion >= self.buy_threshold:
             max_affordable = self.budget // coin.price
             buy_amount = int(max_affordable * self.initial_buy_proportion)
             self.buy(coin, buy_amount)
             self.average_buy_prices[coin.name] = coin.price
-            if (coin.name == "DogWifHat"):
-                print(f"first buying cheese {self.average_buy_prices[coin.name]}")
+            # if (coin.name == "DogWifHat"):
+                # print(f"first buying cheese {self.average_buy_prices[coin.name]}")
             # Still buy some if you already own the coin and have some more money. But the amount you are willing to buy
             # decreases exponentially relative to the amount of money you have left
         elif neighborhood_investment_proportion >= self.buy_threshold:
@@ -219,8 +220,8 @@ class BudgetProportionHerdingAgent(Agent):
                 self.average_buy_prices[coin.name] = (self.average_buy_prices.get(coin.name,
                                                                                   0) * current_holdings + coin.price * buy_amount) / (
                                                              current_holdings + buy_amount)
-                if (coin.name == "DogWifHat"):
-                    print(f"buying cheese {self.average_buy_prices[coin.name]}")
+                # if (coin.name == "DogWifHat"):
+                    # print(f"buying cheese {self.average_buy_prices[coin.name]}")
 
         if self.holdings.get(coin.name, 0) > 0 and coin.name in self.average_buy_prices:
             current_profit_ratio = coin.price / self.average_buy_prices[coin.name]
@@ -235,8 +236,8 @@ class BudgetProportionHerdingAgent(Agent):
                 if random.random() < sell_probability:
                     self.sell(coin, self.holdings[coin.name])
 
-                    if (coin.name == "DogWifHat"):
-                        print(f"Selling cheese for profit: {coin.price, self.average_buy_prices[coin.name], sell_probability}")
+                    # if (coin.name == "DogWifHat"):
+                        # print(f"Selling cheese for profit: {coin.price, self.average_buy_prices[coin.name], sell_probability}")
 
         elif self.holdings.get(coin.name, 0) > 0:
             negative_sentiment = sum(
@@ -245,8 +246,8 @@ class BudgetProportionHerdingAgent(Agent):
                 self.sell(coin, self.holdings[coin.name])
                 if coin.name in self.average_buy_prices:
                     del self.average_buy_prices[coin.name]
-                if (coin.name == "DogWifHat"):
-                    print(f"selliong cheese cause of sentiment {self.negative_sentiment_threshold, negative_sentiment}")
+                # if (coin.name == "DogWifHat"):
+                    # print(f"selliong cheese cause of sentiment {self.negative_sentiment_threshold, negative_sentiment}")
 
     def get_type(self):
         return "BudgetProportionHerdingAgent"

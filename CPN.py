@@ -30,9 +30,6 @@ def create_core_periphery_network(num_agents, core_percent = 0.2, core_connected
     return G
 
 
-import networkx as nx
-import random
-
 
 def create_directed_core_periphery_network(num_agents, core_percent=0.2, core_to_core_prob=0.5,
                                            core_to_periphery_prob=0.5, periphery_to_periphery_prob=0.1,

@@ -53,11 +53,9 @@ class CryptoMarket:
                                                           core_to_periphery_prob=0.5, periphery_to_periphery_prob=0.1,
                                                           periphery_to_core_prob=0.01)
         elif self.network_type == "multiple_core_periphery":
-            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5,
-                                                           interlink_probability=0.01, directed=False)
+            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5, interlink_probability=.01, directed=False)
         elif self.network_type == "directed_multiple_core_periphery":
-            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5,
-                                                           interlink_probability=0.01, directed=True)
+            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5, interlink_probability=.01, directed=True)
 
     def get_coin_price(self, coin_name):
         for coin in self.coins:
@@ -100,7 +98,6 @@ class CryptoMarket:
                 random.shuffle(self.agents)
                 trade_volume = 0
 
-                mcp = 0
                 for agent in self.agents:
                     initial_holdings = agent.holdings.get(coin.name, 0)
                     initial_budget = agent.budget
@@ -125,9 +122,8 @@ class CryptoMarket:
 
                     coin.price = max(coin.price, coin.initial_price * 0.01) #enforce a minimum price for the coin
                     trade_volume += change_in_holdings
-                    mcp = max(mcp, coin.price)
 
-                price_histories[coin.name].append(mcp)
+                    price_histories[coin.name].append(coin.price)
                 for agent_type in self.agent_types:
                     holdings_histories[coin.name][agent_type][t + 1] = agent_holding_metrics[agent_type]
                 color_map = ['green' if agent.holdings.get(coin.name, 0) > 0 else 'grey' for agent in self.agents]
@@ -236,17 +232,15 @@ eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
-random_airdrop_strategy = RandomAirdropStrategy(btc, 0.5, 1000, 0)
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
-wif_airdrop_strategy = LeaderAirdropStrategy(wif, 0.1, 10000, .5)
-cheese_airdrop_strategy = BiggestHoldersAirdropStrategy(cheese, 1, 10000, .1, btc)
+wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.5, 10000, .5, btc)
 
 agent_structure = AgentStructure(1000)
-agent_structure.add_agents(RationalAgent, 50)
-agent_structure.add_agents(BudgetProportionHerdingAgent, 950)
+agent_structure.add_agents(RationalAgent, 300)
+agent_structure.add_agents(LinearHerdingAgent, 700)
 
-market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
-                      airdrop_strategies=[wif_airdrop_strategy], agent_structure = agent_structure)
+market = CryptoMarket(network_type='multiple_core_periphery', initial_coins=[btc, wif],
+                      airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
 
 price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
 market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True)
