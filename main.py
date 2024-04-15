@@ -238,12 +238,12 @@ cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
 random_airdrop_strategy = RandomAirdropStrategy(btc, 0.5, 1000, 0)
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
-wif_airdrop_strategy = LeaderAirdropStrategy(wif, 0.2, 10000, .5)
+wif_airdrop_strategy = LeaderAirdropStrategy(wif, 0.1, 10000, .5)
 cheese_airdrop_strategy = BiggestHoldersAirdropStrategy(cheese, 1, 10000, .1, btc)
 
-agent_structure = AgentStructure(100)
-# agent_structure.add_agents(RationalAgent, 0)
-agent_structure.add_agents(LinearHerdingAgent, 100)
+agent_structure = AgentStructure(1000)
+agent_structure.add_agents(RationalAgent, 50)
+agent_structure.add_agents(BudgetProportionHerdingAgent, 950)
 
 market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
                       airdrop_strategies=[wif_airdrop_strategy], agent_structure = agent_structure)
