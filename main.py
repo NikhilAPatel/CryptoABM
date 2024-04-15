@@ -231,15 +231,15 @@ eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
-leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.9, 100, 0)
-wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.5, 10000, .5, btc)
+leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.3, 100, 0)
+wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 1, 10000, 0.5, btc)
 
-agent_structure = AgentStructure(1000)
-agent_structure.add_agents(RationalAgent, 100)
-agent_structure.add_agents(LinearHerdingAgent, 900)
+agent_structure = AgentStructure(100)
+agent_structure.add_agents(RationalAgent, 20)
+agent_structure.add_agents(BudgetProportionHerdingAgent, 80)
 
-market = CryptoMarket(network_type='scale_free', initial_coins=[btc],
-                      airdrop_strategies=[leader_airdrop_strategy], agent_structure = agent_structure)
+market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
+                      airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
 
 price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
 market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=False)
