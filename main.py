@@ -211,13 +211,13 @@ leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.5, 10000, 0)
 wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, .5, 10000, .5, btc)
 
 agent_structure = AgentStructure(1000)
-agent_structure.add_agents(RationalAgent, 50)
-agent_structure.add_agents(LinearHerdingAgent, 950)
+agent_structure.add_agents(RationalAgent, 300)
+agent_structure.add_agents(LinearHerdingAgent, 700)
 
-market = CryptoMarket(network_type='core_periphery', initial_coins=[btc, wif],
+market = CryptoMarket(network_type='multiple_core_periphery', initial_coins=[btc, wif],
                       airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
 
 price_histories, holdings_histories, network_states, net_trade_volume_histories = market.simulate(100)
-market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=False)
+market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, show_graph=True)
 for coin in market.coins:
     print(f"Final {coin.name} Price: {price_histories[coin.name][-1]}")

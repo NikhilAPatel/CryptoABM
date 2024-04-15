@@ -36,6 +36,8 @@ class RationalAgent(Agent):
     A type of agent that seeks to trade rationally. When instantiated, it comes up with
     a rational determination for the fair market value of a coin. The agent will simply buy below this
     value and attempt to sell above it. It will only invest up to 20% of its networth in a coin. This agent will not engage in trading memecoins.
+
+    They sell meme coins immediately as they believe them to have no intrinsic value
     """
 
     def __init__(self, id, budget):
@@ -49,7 +51,10 @@ class RationalAgent(Agent):
         if coin.name not in self.fair_values:
             self.determine_fair_value(coin)
 
+        #rational investors will just sell a meme coin asap
         if coin.is_meme:
+            if self.holdings.get(coin.name, 0)>0:
+                self.sell(coin, self.holdings[coin.name])
             return
 
         if coin.price < self.fair_values[coin.name]:
