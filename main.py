@@ -15,6 +15,7 @@ class Cryptocurrency:
         self.price = initial_price
         self.initial_price = initial_price
         self.is_meme = ismeme
+        self.highest_price = 0
 
 
 class CryptoMarket:
@@ -67,6 +68,7 @@ class CryptoMarket:
         for coin in self.coins:
             if coin.name == coin_name:
                 coin.price = new_price
+                coin.highest_price = max(coin.highest_price, new_price)
                 break
 
     def simulate(self, num_iterations):
@@ -119,6 +121,7 @@ class CryptoMarket:
                         coin.price *= price_change_factor
 
                     coin.price = max(coin.price, coin.initial_price * 0.01) #enforce a minimum price for the coin
+                    coin.highest_price = max(coin.highest_price, coin.price)
                     trade_volume += change_in_holdings
 
                     price_histories[coin.name].append(coin.price)
@@ -232,7 +235,7 @@ wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.3, 100, 0)
-wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 1, 10000, 0.5, btc)
+wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.4, 100000, 0.5, btc)
 
 agent_structure = AgentStructure(100)
 agent_structure.add_agents(RationalAgent, 20)
@@ -244,6 +247,6 @@ market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
 price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
 market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=False)
 for coin in market.coins:
-    print(f"Final {coin.name} Price: {price_histories[coin.name][-1]}")
+    print(f"Final {coin.name} Price: {price_histories[coin.name][-1]:.2f}, Max Price: {coin.highest_price:.2f}")
 
 # market.generate_images_and_gif(network_states)
