@@ -20,7 +20,8 @@ class Cryptocurrency:
 
 class CryptoMarket:
     def __init__(self, network_type, initial_coins, airdrop_strategies, agent_structure):
-        self.agents = agent_structure.agents
+        self.num_agents = agent_structure.num_agents
+        self.agent_structure = agent_structure
         self.agent_types = agent_structure.agent_types
         self.descriptor_string = f"{network_type}: {agent_structure.get_descriptor()} - {[airdrop_strategy.get_descriptor() for airdrop_strategy in airdrop_strategies]}"
         self.network_type = network_type
@@ -30,33 +31,33 @@ class CryptoMarket:
 
     def create_network(self):
         if self.network_type == 'random':
-            return nx.erdos_renyi_graph(len(self.agents), 0.1, directed=True)
+            return nx.erdos_renyi_graph(self.num_agents, 0.1, directed=True)
         elif self.network_type == 'scale_free':
-            return nx.barabasi_albert_graph(len(self.agents), 2)
+            return nx.barabasi_albert_graph(self.num_agents, 2)
         elif self.network_type == 'small_world':
-            return nx.watts_strogatz_graph(len(self.agents), 4, 0.1)
+            return nx.watts_strogatz_graph(self.num_agents, 4, 0.1)
         elif self.network_type == 'directed_random':
-            return nx.gnp_random_graph(len(self.agents), 0.1)
+            return nx.gnp_random_graph(self.num_agents, 0.1)
         elif self.network_type == 'directed_scale_free':
             G = nx.DiGraph()
-            G.add_nodes_from(range(len(self.agents)))
-            edges = nx.scale_free_graph(len(self.agents), alpha=0.41, beta=0.54, gamma=0.05, delta_in=0.2,
+            G.add_nodes_from(range(self.num_agents))
+            edges = nx.scale_free_graph(self.num_agents, alpha=0.41, beta=0.54, gamma=0.05, delta_in=0.2,
                                         delta_out=0).edges()
             G.add_edges_from(edges)
             return G
         elif self.network_type == 'directed_small_world':
-            return nx.watts_strogatz_graph(len(self.agents), 4, 0.1, directed=True)
+            return nx.watts_strogatz_graph(self.num_agents, 4, 0.1, directed=True)
         elif self.network_type == "core_periphery":
-            return create_core_periphery_network(len(self.agents), core_percent=0.1, core_connected_prob=0.8,
+            return create_core_periphery_network(self.num_agents, core_percent=0.1, core_connected_prob=0.8,
                                                  periphery_connected_prob=0.01)
         elif self.network_type == "directed_core_periphery":
-            return create_directed_core_periphery_network(len(self.agents), core_percent=0.2, core_to_core_prob=0.5,
+            return create_directed_core_periphery_network(self.num_agents, core_percent=0.2, core_to_core_prob=0.5,
                                                           core_to_periphery_prob=0.5, periphery_to_periphery_prob=0.1,
                                                           periphery_to_core_prob=0.01)
         elif self.network_type == "multiple_core_periphery":
-            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5, interlink_probability=.01, directed=False)
+            return create_multiple_core_periphery_networks(total_agents=self.num_agents, networks_count=5, interlink_probability=.01, directed=False)
         elif self.network_type == "directed_multiple_core_periphery":
-            return create_multiple_core_periphery_networks(total_agents=len(self.agents), networks_count=5, interlink_probability=.01, directed=True)
+            return create_multiple_core_periphery_networks(total_agents=self.num_agents, networks_count=5, interlink_probability=.01, directed=True)
 
     def get_coin_price(self, coin_name):
         for coin in self.coins:
@@ -88,17 +89,17 @@ class CryptoMarket:
             #if we did an airdrop on the first iteration, lets update the holdings history just as a special exception
             if t==0:
                 for coin in self.coins:
-                    for agent in self.agents:
+                    for agent in self.agent_structure.agents:
                         if agent.holdings.get(coin.name, 0) > 0:
                             holdings_histories[coin.name][agent.get_type()][0] += 1
 
-            timestep_data = {'cash': sum(agent.budget for agent in self.agents)}
+            timestep_data = {'cash': sum(agent.budget for agent in self.agent_structure.agents)}
             for coin in self.coins:
                 agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
-                random.shuffle(self.agents)
+                random.shuffle(self.agent_structure.agents)
                 trade_volume = 0
 
-                for agent in self.agents:
+                for agent in self.agent_structure.agents:
                     initial_holdings = agent.holdings.get(coin.name, 0)
                     initial_budget = agent.budget
                     agent.act(self, coin)
@@ -127,10 +128,10 @@ class CryptoMarket:
                     price_histories[coin.name].append(coin.price)
                 for agent_type in self.agent_types:
                     holdings_histories[coin.name][agent_type][t + 1] = agent_holding_metrics[agent_type]
-                color_map = ['green' if agent.holdings.get(coin.name, 0) > 0 else 'grey' for agent in self.agents]
+                color_map = ['green' if agent.holdings.get(coin.name, 0) > 0 else 'grey' for agent in self.agent_structure.agents]
                 network_states.append(color_map)
                 net_trade_volume_histories[coin.name].append(trade_volume)
-                timestep_data[coin.name] = sum(agent.holdings.get(coin.name, 0) for agent in self.agents)
+                timestep_data[coin.name] = sum(agent.holdings.get(coin.name, 0) for agent in self.agent_structure.agents)
 
             asset_allocation_data.append(timestep_data)
 
@@ -143,7 +144,7 @@ class CryptoMarket:
             fig, axs = plt.subplots(5, 1, figsize=(12, 30), gridspec_kw={'height_ratios': [1, num_coins, 1, 1, 2]})
 
         for coin in self.coins:
-            x_values = [i/len(self.agents) for i in range(len(price_histories[coin.name]))]
+            x_values = [i/self.num_agents for i in range(len(price_histories[coin.name]))]
             axs[0].plot(x_values, price_histories[coin.name], label=coin.name)
         axs[0].set_xlabel('Iteration')
         axs[0].set_ylabel('Price')
@@ -198,7 +199,7 @@ class CryptoMarket:
     def draw_network(self, ax):
         color_map = []
         for node in self.network:
-            if isinstance(self.agents[node], RationalAgent):
+            if isinstance(self.agent_structure.get_agent(node), RationalAgent):
                 color_map.append('blue')
             else:
                 color_map.append('red')
@@ -235,7 +236,7 @@ wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
 leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.3, 100, 0)
-wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.4, 100000, 0.5, btc)
+wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.4, 10000, 0.5, btc)
 
 agent_structure = AgentStructure(100)
 agent_structure.add_agents(RationalAgent, 20)
@@ -244,9 +245,12 @@ agent_structure.add_agents(NeighborhoodProbabilisticInvestor, 80)
 market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
                       airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
 
+agent_structure.budgets_based_on_popularity(market) #has to be done after the market is defined
+
 price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
-market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=False)
+market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True)
 for coin in market.coins:
     print(f"Final {coin.name} Price: {price_histories[coin.name][-1]:.2f}, Max Price: {coin.highest_price:.2f}")
 
 # market.generate_images_and_gif(network_states)
+

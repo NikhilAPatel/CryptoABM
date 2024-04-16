@@ -109,7 +109,7 @@ class LinearHerdingAgent(Agent):
             return
 
         neighbor_holdings_proportion = sum(
-            market.agents[neighbor].holdings.get(coin.name, 0) > 0 for neighbor in neighbors) / len(neighbors)
+            market.agent_structure.get_agent(neighbor).holdings.get(coin.name, 0) > 0 for neighbor in neighbors) / len(neighbors)
 
         #If this is your first time buying, use your initial buy proportion
         if coin.name not in self.bought and neighbor_holdings_proportion >= self.threshold:
@@ -160,7 +160,7 @@ class LinearHerdingAgent(Agent):
 
         if self.holdings.get(coin.name, 0) > 0:
             negative_sentiment = sum(
-                market.agents[neighbor].holdings.get(coin.name, 0) == 0 for neighbor in neighbors) / len(neighbors)
+                market.agent_structure.get_agent(neighbor).holdings.get(coin.name, 0) == 0 for neighbor in neighbors) / len(neighbors)
             if negative_sentiment > self.negative_sentiment_threshold:
                 if(coin.name=="DogWifHat"):
                     print(f"selliong cheese cause of sentiment {self.negative_sentiment_threshold, negative_sentiment, neighbor_holdings_proportion}")
@@ -196,10 +196,10 @@ class BudgetProportionHerdingAgent(Agent):
 
         # Calculate the total value of the coin held by all neighbors
         total_neighbor_coin_value = sum(
-            market.agents[neighbor].holdings.get(coin.name, 0) * coin.price for neighbor in neighbors)
+            market.agent_structure.get_agent(neighbor).holdings.get(coin.name, 0) * coin.price for neighbor in neighbors)
 
         # Calculate the total budget of all neighbors
-        total_neighbor_budget = sum(market.agents[neighbor].budget for neighbor in neighbors)
+        total_neighbor_budget = sum(market.agent_structure.get_agent(neighbor).budget for neighbor in neighbors)
 
         # Calculate the collective investment proportion of the neighborhood
         neighborhood_investment_proportion = total_neighbor_coin_value / total_neighbor_budget
@@ -252,7 +252,7 @@ class BudgetProportionHerdingAgent(Agent):
 
         elif self.holdings.get(coin.name, 0) > 0:
             negative_sentiment = sum(
-                market.agents[neighbor].holdings.get(coin.name, 0) == 0 for neighbor in neighbors) / len(neighbors)
+                market.agent_structure.get_agent(neighbor).holdings.get(coin.name, 0) == 0 for neighbor in neighbors) / len(neighbors)
             if negative_sentiment > self.negative_sentiment_threshold:
                 self.sell_all(coin)
                 if coin.name in self.average_buy_prices:
@@ -293,16 +293,13 @@ class NeighborhoodProbabilisticInvestor(Agent):
 
         # Calculate the total value of the coin held by all neighbors
         total_neighbor_coin_value = sum(
-            market.agents[neighbor].holdings.get(coin.name, 0) * coin.price for neighbor in neighbors)
+            market.agent_structure.get_agent(neighbor).holdings.get(coin.name, 0) * coin.price for neighbor in neighbors)
 
         # Calculate the total budget of all neighbors
-        total_neighbor_budget = sum(market.agents[neighbor].budget for neighbor in neighbors)
+        total_neighbor_budget = sum(market.agent_structure.get_agent(neighbor).budget for neighbor in neighbors)
 
         # Calculate the collective investment proportion of the neighborhood
         neighborhood_investment_proportion = total_neighbor_coin_value / total_neighbor_budget
-
-        if (coin.name == "DogWifHat"):
-            print(f"cheese neighbors {neighborhood_investment_proportion}")
 
         if coin.name not in self.bought and random.random() < neighborhood_investment_proportion:
             max_affordable = self.budget // coin.price
@@ -324,7 +321,7 @@ class NeighborhoodProbabilisticInvestor(Agent):
 
                 if (coin.name == "DogWifHat"):
                     print(
-                        f"Selling cheese for profit: {coin.price, sell_probability}")
+                        f"Selling cheese due to sentiment: {coin.price, sell_probability}")
 
         #sell for profit somethines
         if self.holdings.get(coin.name, 0) > 0 and coin.name in self.average_buy_prices:

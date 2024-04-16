@@ -63,8 +63,8 @@ class LeaderAirdropStrategy(AirdropStrategy):
 
     def select_recipients(self, market):
         agent_degrees = dict(market.network.degree())
-        sorted_agents = sorted(market.agents, key=lambda agent: agent_degrees[agent.id], reverse=True)
-        num_recipients = int(len(market.agents) * self.percentage)
+        sorted_agents = sorted(market.agent_structure.agents, key=lambda agent: agent_degrees[agent.id], reverse=True)
+        num_recipients = int(market.num_agents * self.percentage)
         return sorted_agents[:num_recipients]
 
     def get_type(self):
@@ -87,9 +87,9 @@ class BiggestHoldersAirdropStrategy(AirdropStrategy):
         self.existing_coin = existing_coin
 
     def select_recipients(self, market):
-        sorted_agents = sorted(market.agents, key=lambda agent: agent.holdings.get(self.existing_coin.name, 0),
+        sorted_agents = sorted(market.agent_structure.agents, key=lambda agent: agent.holdings.get(self.existing_coin.name, 0),
                                reverse=True)
-        num_recipients = int(len(market.agents) * self.percentage)
+        num_recipients = int(market.num_agents * self.percentage)
         return sorted_agents[:num_recipients]
 
     def get_type(self):
