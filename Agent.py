@@ -279,12 +279,13 @@ class NeighborhoodProbabilisticInvestor(Agent):
     Will sell for sentiment
     Will sell to cut losses
     """
-    def __init__(self, id, budget, price_sensitivity=None):
+    def __init__(self, id, budget, price_sensitivity=None, loss_sensitivity=None):
         super().__init__(id, budget)
         self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
+        self.loss_sensitivity = loss_sensitivity if loss_sensitivity is not None else random.uniform(0.5, 1.5)
         self.initial_buy_proportion = random.uniform(0.05, 0.5)
-        self.max_multiple = pareto.rvs(3, scale=10)  # TODO look into a better distribution
-        self.sell_scaling_factor = 0.2 #TODO adjust this
+        self.max_multiple = pareto.rvs(8, scale=3)  # TODO look into a better distribution
+        self.sell_scaling_factor = 0.1 #TODO adjust this
 
     def act(self, market, coin):
         if isinstance(market.network, nx.DiGraph):
@@ -326,6 +327,7 @@ class NeighborhoodProbabilisticInvestor(Agent):
                 if (coin.name == "DogWifHat"):
                     print(
                         f"Selling cheese due to sentiment: {coin.price, sell_probability}")
+                return
 
         #sell for profit somethines
         if self.holdings.get(coin.name, 0) > 0 and coin.name in self.average_buy_prices:
@@ -345,6 +347,24 @@ class NeighborhoodProbabilisticInvestor(Agent):
 
                     if (coin.name == "DogWifHat"):
                         print(f"Selling cheese for profit: {coin.price, sell_probability}")
+
+                    return
+
+        # #sell to cut losses
+        if self.holdings.get(coin.name, 0) > 0 and coin.name in self.average_buy_prices:
+            current_loss_ratio = self.average_buy_prices[coin.name] / coin.price
+            # Calculate the probability to sell based on an exponential function
+            # Adjust the base of the exponential function according to your loss sensitivity
+            sell_probability = 1 - math.exp(-self.loss_sensitivity * (current_loss_ratio - 1))
+
+            if random.random() < sell_probability:
+                self.sell_all(coin)
+                if coin.name in self.average_buy_prices:
+                    del self.average_buy_prices[coin.name]
+
+                if (coin.name == "DogWifHat"):
+                    print(f"Selling cheese to cut losses: {coin.price, sell_probability}")
+                return
 
 
     def get_type(self):
