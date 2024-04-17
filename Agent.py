@@ -84,13 +84,14 @@ class RationalAgent(Agent):
 
 class LinearHerdingAgent(Agent):
     """
-    through the max_multiple variable, we control how likely people are to sell as their profits approach their max multiple
+    Buys if the proportion of the neighborhood holding the coin is sufficient
+    Will sell for profit
+    Will sell for sentiment
     """
-    def __init__(self, id, budget, threshold=None, profit_threshold=None, price_sensitivity=None,
+    def __init__(self, id, budget, threshold=None, price_sensitivity=None,
                  negative_sentiment_threshold=None):
         super().__init__(id, budget)
         self.threshold = threshold if threshold is not None else random.uniform(0.5, 0.7)
-        self.profit_threshold = profit_threshold if profit_threshold is not None else random.uniform(1.2, 2.0)
         self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
         self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(
             0.5, 0.8)
@@ -173,12 +174,16 @@ class LinearHerdingAgent(Agent):
 
 
 class BudgetProportionHerdingAgent(Agent):
-    def __init__(self, id, budget, buy_threshold=None, profit_threshold=None,
+    """"
+    Buys if the collective proportion of neighborhood investment is above a certain threshold
+    Will sell for profit
+    Will sell for sentiment
+    """
+    def __init__(self, id, budget, buy_threshold=None,
                  price_sensitivity=None,
                  negative_sentiment_threshold=None):
         super().__init__(id, budget)
         self.buy_threshold = buy_threshold if buy_threshold is not None else random.uniform(0.02, 0.1)
-        self.profit_threshold = profit_threshold if profit_threshold is not None else random.uniform(1.2, 2.0)
         self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
         self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(
             0.5, 0.8)
@@ -269,15 +274,14 @@ class NeighborhoodProbabilisticInvestor(Agent):
     Agent that buys and sell probabilistically based on the proportion of funds allocated to that coin in its neighborhood
     Also sells with the same logic, but uses a scaling factor sell_scaling_factor to dampen the probability since usually
     its rare for a significant amount of a neighborhoods budget to be invested in one asset
+
+    Will sell for profit
+    Will sell for sentiment
+    Will sell to cut losses
     """
-    def __init__(self, id, budget, buy_threshold=None, profit_threshold=None,
-                 price_sensitivity=None,
-                 negative_sentiment_threshold=None):
+    def __init__(self, id, budget, price_sensitivity=None):
         super().__init__(id, budget)
-        self.profit_threshold = profit_threshold if profit_threshold is not None else random.uniform(1.2, 2.0)
         self.price_sensitivity = price_sensitivity if price_sensitivity is not None else random.uniform(0.5, 1.5)
-        self.negative_sentiment_threshold = negative_sentiment_threshold if negative_sentiment_threshold is not None else random.uniform(
-            0.5, 0.8)
         self.initial_buy_proportion = random.uniform(0.05, 0.5)
         self.max_multiple = pareto.rvs(3, scale=10)  # TODO look into a better distribution
         self.sell_scaling_factor = 0.2 #TODO adjust this

@@ -128,11 +128,11 @@ class CryptoMarket:
                     price_histories[coin.name].append(coin.price)
                 for agent_type in self.agent_types:
                     holdings_histories[coin.name][agent_type][t + 1] = agent_holding_metrics[agent_type]
-                color_map = ['green' if agent.holdings.get(coin.name, 0) > 0 else 'grey' for agent in self.agent_structure.agents]
-                network_states.append(color_map)
                 net_trade_volume_histories[coin.name].append(trade_volume)
                 timestep_data[coin.name] = sum(agent.holdings.get(coin.name, 0) for agent in self.agent_structure.agents)
-
+            color_map = ['green' if agent.holdings.get("DogWifHat", 0) > 0 else 'grey' for agent in
+                         self.agent_structure.agents]
+            network_states.append(color_map)
             asset_allocation_data.append(timestep_data)
 
         return price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data
