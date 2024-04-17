@@ -50,9 +50,11 @@ class RationalAgent(Agent):
     They sell meme coins immediately as they believe them to have no intrinsic value
     """
 
-    def __init__(self, id, budget):
+    def __init__(self, id, budget, fair_value_growth_enabled=False, fair_value_growth_rate=0.01):
         super().__init__(id, budget)
         self.fair_values = {}
+        self.fair_value_growth_enabled = fair_value_growth_enabled
+        self.fair_value_growth_rate = fair_value_growth_rate
 
     def determine_fair_value(self, coin):
         self.fair_values[coin.name] = np.random.normal(coin.initial_price, coin.initial_price * 0.1)
@@ -60,6 +62,10 @@ class RationalAgent(Agent):
     def act(self, market, coin):
         if coin.name not in self.fair_values:
             self.determine_fair_value(coin)
+
+        # Update the fair value based on the growth rate if enabled
+        if self.fair_value_growth_enabled:
+            self.fair_values[coin.name] *= (1 + self.fair_value_growth_rate)
 
         #rational investors will just sell a meme coin asap
         if coin.is_meme:

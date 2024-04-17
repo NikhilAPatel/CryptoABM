@@ -26,8 +26,11 @@ class AgentStructure:
         self.agent_type_string = ""
         self.agent_types = []
 
-    def add_agents(self, agent, number):
-        self.agents += [agent(self.id_generator.get_next_id(), budget=random.randint(1000, 10000)) for _ in
+    def add_agents(self, agent, number, agent_kwargs=None):
+        if agent_kwargs is None:
+            agent_kwargs = {}
+
+        self.agents += [agent(self.id_generator.get_next_id(), budget=random.randint(1000, 10000), **agent_kwargs) for _ in
                         range(number)]
         self.agent_type_string += f"{self.agents[-1].get_type()}: {number}, "
         self.agent_types += [self.agents[-1].get_type()]

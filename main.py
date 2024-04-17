@@ -239,7 +239,11 @@ leader_airdrop_strategy = LeaderAirdropStrategy(btc, 0.3, 100, 0)
 wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.4, 10000, 0.5, btc)
 
 agent_structure = AgentStructure(100)
-agent_structure.add_agents(RationalAgent, 20)
+rational_agent_kwargs = {
+    'fair_value_growth_enabled': True,
+    'fair_value_growth_rate': 0.01
+}
+agent_structure.add_agents(RationalAgent, 20, agent_kwargs=rational_agent_kwargs)
 agent_structure.add_agents(NeighborhoodProbabilisticInvestor, 80) #TODO mayde delete selling to cut losses, causes really sharp peaks
 
 market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
