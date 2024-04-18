@@ -235,8 +235,9 @@ eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
-leader_airdrop_strategy = ProportionalLeaderAirdropStrategy(btc, 0.3, 100, 0, 0.5)
-wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.4, 10000, 0.5, btc)
+# leader_airdrop_strategy = ProportionalLeaderAirdropStrategy(btc, 0.1, 100, 0, 0.5)
+leader_airdrop_strategy = MoreToLeaders(btc, 0, .4, 80_000)
+wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.4, .4, 0.5, btc)
 
 agent_structure = AgentStructure(100)
 rational_agent_kwargs = {

@@ -327,13 +327,14 @@ class NeighborhoodProbabilisticInvestor(Agent):
         # Calculate the collective investment proportion of the neighborhood
         neighborhood_investment_proportion = total_neighbor_coin_value / total_neighbor_budget
 
+
         if coin.name not in self.bought and random.random() < neighborhood_investment_proportion:
             max_affordable = self.budget // coin.price
             buy_amount = int(max_affordable * self.initial_buy_proportion)
             self.buy(coin, buy_amount)
             self.average_buy_prices[coin.name] = coin.price
-            if (coin.name == "DogWifHat"):
-                print(f"first buying cheese {self.average_buy_prices[coin.name]}")
+            # if (coin.name == "DogWifHat"):
+            print(f"first buying {coin.name} {self.average_buy_prices[coin.name]}")
 
         proportion_not_invested = 1 - neighborhood_investment_proportion
 
@@ -345,9 +346,8 @@ class NeighborhoodProbabilisticInvestor(Agent):
                 if coin.name in self.average_buy_prices:
                     del self.average_buy_prices[coin.name]
 
-                if (coin.name == "DogWifHat"):
-                    print(
-                        f"Selling cheese due to sentiment: {coin.price, sell_probability}")
+                # if (coin.name == "DogWifHat"):
+                print(f"Selling {coin.name} due to sentiment: {coin.price, sell_probability}")
                 return
 
         #sell for profit somethines
@@ -366,8 +366,8 @@ class NeighborhoodProbabilisticInvestor(Agent):
                     if coin.name in self.average_buy_prices:
                         del self.average_buy_prices[coin.name]
 
-                    if (coin.name == "DogWifHat"):
-                        print(f"Selling cheese for profit: {coin.price, sell_probability}")
+                    # if (coin.name == "DogWifHat"):
+                    print(f"Selling {coin.name} for profit: {coin.price, sell_probability}")
 
                     return
 
@@ -383,8 +383,8 @@ class NeighborhoodProbabilisticInvestor(Agent):
                 if coin.name in self.average_buy_prices:
                     del self.average_buy_prices[coin.name]
 
-                if (coin.name == "DogWifHat"):
-                    print(f"Selling cheese to cut losses: {coin.price, sell_probability}")
+                # if (coin.name == "DogWifHat"):
+                print(f"Selling {coin.name} to cut losses: {coin.price, sell_probability}")
                 return
 
 
