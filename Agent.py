@@ -37,7 +37,7 @@ class Agent:
 
     def get_total_portfolio_value(self, market):
         value = self.budget
-        for coin, amount in self.holdings:
+        for coin, amount in self.holdings.items():
             value += market.get_coin_price(coin) * amount
 
         return value
@@ -92,7 +92,10 @@ class RationalAgent(Agent):
                 buy_amount = 0
             self.buy(coin, buy_amount)
         elif coin.price > self.fair_values[coin.name] and self.holdings.get(coin.name, 0) > 0:
-            sell_amount = random.randint(1, self.holdings[coin.name])
+            try:
+                sell_amount = random.randint(1, int(self.holdings[coin.name]))
+            except ValueError:
+                sell_amount=0
             self.sell(coin, sell_amount)
 
     def get_type(self):
@@ -317,8 +320,9 @@ class NeighborhoodProbabilisticInvestor(Agent):
         total_neighbor_coin_value = sum(
             market.agent_structure.get_agent(neighbor).holdings.get(coin.name, 0) * coin.price for neighbor in neighbors)
 
-        # Calculate the total budget of all neighbors
-        total_neighbor_budget = sum(market.agent_structure.get_agent(neighbor).budget for neighbor in neighbors)
+        # Calculate the total portfolio value of all neighbors
+        # total_neighbor_budget = sum(market.agent_structure.get_agent(neighbor).budget for neighbor in neighbors)
+        total_neighbor_budget = sum(market.agent_structure.get_agent(neighbor).get_total_portfolio_value(market) for neighbor in neighbors)
 
         # Calculate the collective investment proportion of the neighborhood
         neighborhood_investment_proportion = total_neighbor_coin_value / total_neighbor_budget

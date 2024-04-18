@@ -235,12 +235,12 @@ eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
 wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
 cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
-leader_airdrop_strategy = RandomAirdropStrategy(btc, 0.3, 100, 0)
+leader_airdrop_strategy = ProportionalLeaderAirdropStrategy(btc, 0.3, 100, 0, 0.5)
 wif_airdrop_strategy = BiggestHoldersAirdropStrategy(wif, 0.4, 10000, 0.5, btc)
 
 agent_structure = AgentStructure(100)
 rational_agent_kwargs = {
-    'fair_value_growth_enabled': True,
+    'fair_value_growth_enabled': False,
     'fair_value_growth_rate': 0.01
 }
 agent_structure.add_agents(RationalAgent, 20, agent_kwargs=rational_agent_kwargs)
@@ -256,5 +256,5 @@ market.plot_price_history(price_histories, holdings_histories, net_trade_volume_
 for coin in market.coins:
     print(f"Final {coin.name} Price: {price_histories[coin.name][-1]:.2f}, Max Price: {coin.highest_price:.2f}")
 
-market.generate_images_and_gif(network_states)
+# market.generate_images_and_gif(network_states)
 
