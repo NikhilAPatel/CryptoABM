@@ -34,11 +34,21 @@ class Agent:
         if coin.name in self.bought:
             self.bought.remove(coin.name)
 
+
+    def get_total_portfolio_value(self, market):
+        value = self.budget
+        for coin, amount in self.holdings:
+            value += market.get_coin_price(coin) * amount
+
+        return value
+
+
     def act(self, market, coin):
         pass
 
     def get_type(self):
         pass
+
 
 
 class RationalAgent(Agent):
@@ -55,9 +65,10 @@ class RationalAgent(Agent):
         self.fair_values = {}
         self.fair_value_growth_enabled = fair_value_growth_enabled
         self.fair_value_growth_rate = fair_value_growth_rate
+        self.value_bias = random.uniform(0.05, 0.2)
 
     def determine_fair_value(self, coin):
-        self.fair_values[coin.name] = np.random.normal(coin.initial_price, coin.initial_price * 0.1)
+        self.fair_values[coin.name] = np.random.normal(coin.initial_price, self.value_bias* coin.initial_price)
 
     def act(self, market, coin):
         if coin.name not in self.fair_values:
@@ -291,7 +302,7 @@ class NeighborhoodProbabilisticInvestor(Agent):
         self.loss_sensitivity = loss_sensitivity if loss_sensitivity is not None else random.uniform(0.5, 1.5)
         self.initial_buy_proportion = random.uniform(0.05, 0.5)
         self.max_multiple = pareto.rvs(8, scale=3)  # TODO look into a better distribution
-        self.sell_scaling_factor = 0.1 #TODO adjust this
+        self.sell_scaling_factor = random.uniform(0.05, 0.2)  #TODO is this range good
 
     def act(self, market, coin):
         if isinstance(market.network, nx.DiGraph):

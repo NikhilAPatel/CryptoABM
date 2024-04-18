@@ -31,7 +31,8 @@ class AirdropStrategy(ABC):
 
     def do_airdrop(self, market):
         recipients = self.select_recipients(market)
-        for agent in recipients:
+        for id in recipients:
+            agent = market.agent_structure.get_agent(id)
             agent.holdings[self.coin.name] = agent.holdings.get(self.coin.name, 0) + self.amount
             agent.average_buy_prices[self.coin] = self.coin.price
 
@@ -46,10 +47,60 @@ class RandomAirdropStrategy(AirdropStrategy):
     """
 
     def select_recipients(self, market):
-        return random.choices(market.agents, k=int(len(market.agents) * self.percentage))
+        recipients = random.choices(market.agent_structure.agents, k=int(market.num_agents * self.percentage))
+        return [agent.id for agent in recipients]
 
     def get_type(self):
         return "RandomAirdropStrategy"
+
+class ProportionalLeaderAirdropStrategy(AirdropStrategy):
+    def __init__(self, coin, percentage, amount, time, threshold):
+        super().__init__(coin, percentage, amount, time)
+        self.threshold = threshold  # This is the target threshold percentage of crypto to total assets
+    def do_airdrop(self, market):
+        # Determine the number of leaders to target
+        num_leaders = int(len(market.agent_structure.agents) * self.percentage)
+
+        # Get the nodes sorted by their degree (influence)
+        agent_degrees = dict(market.network.degree())
+        agent_degrees = sorted(agent_degrees.items(), key=lambda x: x[1], reverse=True)
+
+        recipients = agent_degrees[:num_leaders]
+
+        for agent, degree in recipients:
+            print(agent, market.agent_structure.get_agent(agent).get_type())
+
+        # sorted_agents = sorted(agent_degrees,
+        #                        key=lambda agent: market.agent_structure.get_agent(agent_degrees[agent.id]),
+        #                        reverse=True)
+        # targeted_agents = sorted_agents[:num_leaders]
+        #
+        # print(sorted_agents)
+
+        # Calculate and distribute the airdrop
+        # for agent in targeted_agents:
+        #     total_assets = agent.get_total_assets()  # Assuming there is a method to calculate total assets
+        #     needed_airdrop = (self.threshold * total_assets) - agent.holdings.get(self.coin.name, 0)
+        #
+        #     # Only airdrop if the needed amount is less than or equal to the predefined amount
+        #     if 0 < needed_airdrop <= self.amount:
+        #         agent.holdings[self.coin.name] = agent.holdings.get(self.coin.name, 0) + needed_airdrop
+        #         agent.average_buy_prices[self.coin] = self.coin.price  # Update average buy price if needed
+        #
+        #     # Optionally, adjust this condition based on additional strategy requirements
+        #     elif needed_airdrop <= 0:
+        #         continue  # No airdrop needed, already meets or exceeds the threshold
+
+        return f"Airdropped strategically to ensure neighborhood asset thresholds are met"
+
+
+    def select_recipients(self, market):
+        pass
+
+    def get_type(self):
+        return "ProportionalLeaderAirdropStrategy"
+
+
 
 
 class LeaderAirdropStrategy(AirdropStrategy):
@@ -62,10 +113,16 @@ class LeaderAirdropStrategy(AirdropStrategy):
     """
 
     def select_recipients(self, market):
+        # Determine the number of leaders to target
+        num_leaders = int(len(market.agent_structure.agents) * self.percentage)
+
+        # Get the nodes sorted by their degree (influence)
         agent_degrees = dict(market.network.degree())
-        sorted_agents = sorted(market.agent_structure.agents, key=lambda agent: agent_degrees[agent.id], reverse=True)
-        num_recipients = int(market.num_agents * self.percentage)
-        return sorted_agents[:num_recipients]
+        agent_degrees = sorted(agent_degrees.items(), key=lambda x: x[1], reverse=True)
+
+        recipients = agent_degrees[:num_leaders]
+        recipients = [agent for agent, degree in recipients]
+        return recipients
 
     def get_type(self):
         return "LeaderAirdropStrategy"
@@ -90,7 +147,9 @@ class BiggestHoldersAirdropStrategy(AirdropStrategy):
         sorted_agents = sorted(market.agent_structure.agents, key=lambda agent: agent.holdings.get(self.existing_coin.name, 0),
                                reverse=True)
         num_recipients = int(market.num_agents * self.percentage)
-        return sorted_agents[:num_recipients]
+        sorted_agents = sorted_agents[:num_recipients]
+        sorted_agents = [agent.id for agent in sorted_agents]
+        return sorted_agents
 
     def get_type(self):
         return "BiggestHoldersAirdropStrategy"
