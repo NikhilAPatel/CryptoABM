@@ -272,8 +272,8 @@ class BudgetProportionHerdingAgent(Agent):
                 if random.random() < sell_probability:
                     self.sell_all(coin)
 
-                    if (coin.name == "DogWifHat"):
-                        print(f"Selling cheese for profit: {coin.price, self.average_buy_prices[coin.name], sell_probability}")
+                    if self.debug:
+                        print(f"Selling {coin.name} for profit: {coin.price, self.average_buy_prices[coin.name], sell_probability}")
 
         elif self.holdings.get(coin.name, 0) > 0:
             negative_sentiment = sum(
@@ -282,8 +282,8 @@ class BudgetProportionHerdingAgent(Agent):
                 self.sell_all(coin)
                 if coin.name in self.average_buy_prices:
                     del self.average_buy_prices[coin.name]
-                if (coin.name == "DogWifHat"):
-                    print(f"selliong cheese cause of sentiment {self.negative_sentiment_threshold, negative_sentiment}")
+                if self.debug:
+                    print(f"selliong {coin.name} cause of sentiment {self.negative_sentiment_threshold, negative_sentiment}")
 
     def get_type(self):
         return "BudgetProportionHerdingAgent"
@@ -306,6 +306,7 @@ class NeighborhoodProbabilisticInvestor(Agent):
         self.initial_buy_proportion = random.uniform(0.05, 0.5)
         self.max_multiple = pareto.rvs(8, scale=3)  # TODO look into a better distribution
         self.sell_scaling_factor = random.uniform(0.05, 0.2)  #TODO is this range good
+        self.debug=False
 
     def act(self, market, coin):
         if isinstance(market.network, nx.DiGraph):
@@ -333,8 +334,8 @@ class NeighborhoodProbabilisticInvestor(Agent):
             buy_amount = int(max_affordable * self.initial_buy_proportion)
             self.buy(coin, buy_amount)
             self.average_buy_prices[coin.name] = coin.price
-            # if (coin.name == "DogWifHat"):
-            print(f"first buying {coin.name} {self.average_buy_prices[coin.name]}")
+            if self.debug:
+                print(f"first buying {coin.name} {self.average_buy_prices[coin.name]}")
 
         proportion_not_invested = 1 - neighborhood_investment_proportion
 
@@ -346,8 +347,8 @@ class NeighborhoodProbabilisticInvestor(Agent):
                 if coin.name in self.average_buy_prices:
                     del self.average_buy_prices[coin.name]
 
-                # if (coin.name == "DogWifHat"):
-                print(f"Selling {coin.name} due to sentiment: {coin.price, sell_probability}")
+                if self.debug:
+                    print(f"Selling {coin.name} due to sentiment: {coin.price, sell_probability}")
                 return
 
         #sell for profit somethines
@@ -366,8 +367,8 @@ class NeighborhoodProbabilisticInvestor(Agent):
                     if coin.name in self.average_buy_prices:
                         del self.average_buy_prices[coin.name]
 
-                    # if (coin.name == "DogWifHat"):
-                    print(f"Selling {coin.name} for profit: {coin.price, sell_probability}")
+                    if self.debug:
+                        print(f"Selling {coin.name} for profit: {coin.price, sell_probability}")
 
                     return
 
@@ -383,8 +384,8 @@ class NeighborhoodProbabilisticInvestor(Agent):
                 if coin.name in self.average_buy_prices:
                     del self.average_buy_prices[coin.name]
 
-                # if (coin.name == "DogWifHat"):
-                print(f"Selling {coin.name} to cut losses: {coin.price, sell_probability}")
+                if self.debug:
+                    print(f"Selling {coin.name} to cut losses: {coin.price, sell_probability}")
                 return
 
 

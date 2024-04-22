@@ -8,6 +8,7 @@ from Agent import *
 from Airdrop import *
 from CPN import *
 from AgentStructure import AgentStructure
+from collections import defaultdict
 
 class Cryptocurrency:
     def __init__(self, name, initial_price, ismeme):
@@ -55,7 +56,7 @@ class CryptoMarket:
                                                           core_to_periphery_prob=0.5, periphery_to_periphery_prob=0.1,
                                                           periphery_to_core_prob=0.01)
         elif self.network_type == "multiple_core_periphery":
-            return create_multiple_core_periphery_networks(total_agents=self.num_agents, networks_count=5, interlink_probability=.01, directed=False)
+            return create_multiple_core_periphery_networks(total_agents=self.num_agents, networks_count=4, interlink_probability=.1, directed=False)
         elif self.network_type == "directed_multiple_core_periphery":
             return create_multiple_core_periphery_networks(total_agents=self.num_agents, networks_count=5, interlink_probability=.01, directed=True)
 
@@ -76,12 +77,13 @@ class CryptoMarket:
         price_histories = {coin.name: [coin.price] for coin in self.coins}
         network_states = []
         net_trade_volume_histories = {coin.name: [] for coin in self.coins}
+        trade_volume_histories = {coin.name: [] for coin in self.coins}
 
         holdings_histories = {coin.name: {agent_type: [0] * (num_iterations + 1) for agent_type in self.agent_types}
                               for coin in self.coins}
         asset_allocation_data = []
 
-        for t in tqdm(range(num_iterations)):
+        for t in range(num_iterations):
             #Execute the airdrop when needed
             for airdrop_strategy in self.airdrop_strategies:
                 if int(airdrop_strategy.time * num_iterations)==t:
@@ -98,6 +100,7 @@ class CryptoMarket:
                 agent_holding_metrics = {agent_type: 0 for agent_type in self.agent_types}
                 random.shuffle(self.agent_structure.agents)
                 trade_volume = 0
+                abs_trade_volume = 0
 
                 for agent in self.agent_structure.agents:
                     initial_holdings = agent.holdings.get(coin.name, 0)
@@ -123,19 +126,21 @@ class CryptoMarket:
 
                     coin.price = max(coin.price, coin.initial_price * 0.01) #enforce a minimum price for the coin
                     coin.highest_price = max(coin.highest_price, coin.price)
-                    trade_volume += change_in_holdings
+                    trade_volume -= change_in_holdings
+                    abs_trade_volume += abs(change_in_holdings)
 
                     price_histories[coin.name].append(coin.price)
                 for agent_type in self.agent_types:
                     holdings_histories[coin.name][agent_type][t + 1] = agent_holding_metrics[agent_type]
                 net_trade_volume_histories[coin.name].append(trade_volume)
+                trade_volume_histories[coin.name].append(abs_trade_volume)
                 timestep_data[coin.name] = sum(agent.holdings.get(coin.name, 0) for agent in self.agent_structure.agents)
             color_map = ['green' if agent.holdings.get("Bitcoin", 0) > 0 else 'grey' for agent in
                          self.agent_structure.agents]
             network_states.append(color_map)
             asset_allocation_data.append(timestep_data)
 
-        return price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data
+        return price_histories, holdings_histories, network_states, net_trade_volume_histories, trade_volume_histories, asset_allocation_data
 
     def plot_price_history(self, price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True):
         num_coins = len(self.coins)
@@ -199,10 +204,11 @@ class CryptoMarket:
     def draw_network(self, ax):
         color_map = []
         for node in self.network:
-            if isinstance(self.agent_structure.get_agent(node), RationalAgent):
-                color_map.append('blue')
-            else:
-                color_map.append('red')
+            # if isinstance(self.agent_structure.get_agent(node), RationalAgent):
+            #     color_map.append('blue')
+            # else:
+            #     color_map.append('red')
+            color_map.append('blue')
 
         pos = nx.spring_layout(self.network)
         nx.draw(self.network, pos, node_color=color_map, with_labels=True, ax=ax)
@@ -229,33 +235,82 @@ class CryptoMarket:
         imageio.mimsave(output_filename, images, fps=5)  # Adjust fps to control speed of the GIF
 
 
-# Example usage
-btc = Cryptocurrency('Bitcoin', 1.00, ismeme=False)
-eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
-wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
-cheese = Cryptocurrency('Cheese', .25, ismeme=True)
+num_simulations = 5
 
-# leader_airdrop_strategy = ProportionalLeaderAirdropStrategy(btc, 0.1, 100, 0, 0.5)
-leader_airdrop_strategy = MoreToLeaders(btc, 0, .4, 80_000)
-wif_airdrop_strategy = ProportionalBiggestHoldersAirdropStrategy(wif, 0.4, .4 , 0.5, btc)
+all_price_histories = []
+all_holdings_histories = []
+all_network_states = []
+all_net_trade_volume_histories = []
+all_trade_volume_histories = []
+all_asset_allocation_data = []
+max_prices = defaultdict(list)
+amount_airdropped = defaultdict(list)
 
-agent_structure = AgentStructure(100)
-rational_agent_kwargs = {
-    'fair_value_growth_enabled': False,
-    'fair_value_growth_rate': 0.01
-}
-agent_structure.add_agents(RationalAgent, 20, agent_kwargs=rational_agent_kwargs)
-agent_structure.add_agents(NeighborhoodProbabilisticInvestor, 80) #TODO mayde delete selling to cut losses, causes really sharp peaks
+for i in range(num_simulations):
+    print(f"Round {i}")
+    # Example usage
+    btc1 = Cryptocurrency('Mitcoin', 1.00, ismeme=False)
+    btc = Cryptocurrency('Bitcoin', 1.00, ismeme=False)
+    eth = Cryptocurrency('Ethereum', 0.50, ismeme=False)
+    wif = Cryptocurrency('DogWifHat', .25, ismeme=True)
+    cheese = Cryptocurrency('Cheese', .25, ismeme=True)
 
-market = CryptoMarket(network_type='scale_free', initial_coins=[btc, wif],
-                      airdrop_strategies=[leader_airdrop_strategy, wif_airdrop_strategy], agent_structure = agent_structure)
+    # leader_airdrop_strategy = ProportionalLeaderAirdropStrategy(btc, 0.1, 100, 0, 0.5)
+    # leader_airdrop_strategy = RandomAirdropStrategy(btc, 0, 0.2, 1000, btc1)
+    wif_airdrop_strategy = ProportionalLeaderAirdropStrategy(wif, 0.4, .6 , 1)
 
-agent_structure.budgets_based_on_popularity(market) #has to be done after the market is defined
+    network_type = "scale_free"
+    num_rational = 90
+    num_behav = 210
+    num_agents = num_rational + num_behav
 
-price_histories, holdings_histories, network_states, net_trade_volume_histories, asset_allocation_data = market.simulate(100)
+    agent_structure = AgentStructure(num_agents)
+    rational_agent_kwargs = {
+        'fair_value_growth_enabled': False,
+        'fair_value_growth_rate': 0.01
+    }
+    agent_structure.add_agents(RationalAgent, num_rational, agent_kwargs=rational_agent_kwargs)
+    agent_structure.add_agents(NeighborhoodProbabilisticInvestor, num_behav) #TODO mayde delete selling to cut losses, causes really sharp peaks
+
+    market = CryptoMarket(network_type=network_type, initial_coins=[btc, wif],
+                          airdrop_strategies=[wif_airdrop_strategy], agent_structure = agent_structure)
+
+    agent_structure.budgets_based_on_popularity(market) #has to be done after the market is defined
+
+    price_histories, holdings_histories, network_states, net_trade_volume_histories, trade_volume_histories, asset_allocation_data = market.simulate(50)
+
+    for coin in market.coins:
+        max_prices[coin.name].append(coin.highest_price)
+        print(f"Final {coin.name} Price: {price_histories[coin.name][-1]:.2f}, Max Price: {coin.highest_price:.2f}")
+        amount_airdropped[coin.name].append(wif_airdrop_strategy.amount_airdropped)
+
+
+    all_price_histories.append(price_histories)
+    all_holdings_histories.append(holdings_histories)
+    all_network_states.append(network_states)
+    all_net_trade_volume_histories.append(net_trade_volume_histories)
+    all_trade_volume_histories.append(trade_volume_histories)
+    all_asset_allocation_data.append(asset_allocation_data)
+    print()
+
+
+print("Summary")
 market.plot_price_history(price_histories, holdings_histories, net_trade_volume_histories, asset_allocation_data, show_graph=True)
+
 for coin in market.coins:
-    print(f"Final {coin.name} Price: {price_histories[coin.name][-1]:.2f}, Max Price: {coin.highest_price:.2f}")
+    avg_max = sum(max_prices[coin.name])/num_simulations
+    amt_airdropped = sum(amount_airdropped[coin.name])/num_simulations if coin.name=="DogWifHat" else 0
+    print(f"Average {coin.name} Max Price: {avg_max:.2f}, Amount Airdropped: {amt_airdropped:.0f}")
 
 # market.generate_images_and_gif(network_states)
 
+# print(net_trade_volume_histories)
+
+netvol5 = sum(net_trade_volume_histories["Bitcoin"][25:31])
+vol5= sum(trade_volume_histories["Bitcoin"][25:31])
+
+netvol20 = sum(net_trade_volume_histories["Bitcoin"][25:46])
+vol20= sum(trade_volume_histories["Bitcoin"][25:46])
+
+
+# print(f"{network_type} & {num_rational} & {num_behav} & strategy & airdropcost & \\$1.00 & \\${btc.highest_price:.2f} & \\${price_histories[btc.name][-1]:.2f} & {netvol5:.0f} & {vol5:.0f} & {netvol20:.0f} & {vol20:.0f} \\\\")

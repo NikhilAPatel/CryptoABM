@@ -18,6 +18,7 @@ class AirdropStrategy(ABC):
         self.coin = coin
         self.time = time
         self.percentage = percentage
+        self.amount_airdropped = 0
 
     @abstractmethod
     def select_recipients(self, market):
@@ -36,6 +37,7 @@ class AirdropStrategy(ABC):
 
 class RandomAirdropStrategy(AirdropStrategy):
     """
+    Give coins to a random percentage of people
     Random Airdrop Strategy
     :param market
     :param coin
@@ -63,11 +65,15 @@ class RandomAirdropStrategy(AirdropStrategy):
 
         print(
             f"{self.get_type()} airdropped {total_airdropped} {self.coin.name} for a total of ${total_value_airdropped} at time {self.time} ")
+        self.amount_airdropped = total_value_airdropped
 
     def get_type(self):
         return "RandomAirdropStrategy"
 
 class MoreToLeaders(AirdropStrategy):
+    """
+    give away a total of total_coins to the top x% percent of people by outdegree. The higher degree, the more coins they get
+    """
     def __init__(self, coin, time, percentage, total_coins):
         super().__init__(coin, time, percentage)
         self.total_coin = total_coins
@@ -97,6 +103,7 @@ class MoreToLeaders(AirdropStrategy):
 
         print(
             f"{self.get_type()} airdropped {total_airdropped} {self.coin.name} for a total of ${total_value_airdropped} at time {self.time} ")
+        self.amount_airdropped = total_value_airdropped
 
     def select_recipients(self, market):
         pass
@@ -155,6 +162,7 @@ class ProportionalLeaderAirdropStrategy(AirdropStrategy):
 
         print(
             f"ProportionalLeaderAirdropStrategy airdropped {total_airdropped} {self.coin.name} for a total of ${total_value_airdropped} at time {self.time} ")
+        self.amount_airdropped = total_value_airdropped
 
     def select_recipients(self, market):
         pass
@@ -164,6 +172,9 @@ class ProportionalLeaderAirdropStrategy(AirdropStrategy):
 
 
 class RandomProportionalAirdropStrategy(AirdropStrategy):
+    """
+    Distributes coins to random nodes such that the percentage of money invested in that neighborhood in that coin is now greater than some threshold
+    """
     def __init__(self, coin, time, percentage, threshold):
         super().__init__(coin, time, percentage)
         self.threshold = threshold  # This is the target threshold percentage of crypto to total assets
@@ -204,6 +215,7 @@ class RandomProportionalAirdropStrategy(AirdropStrategy):
 
         print(
             f"{self.get_type()} airdropped {total_airdropped} {self.coin.name} for a total of ${total_value_airdropped} at time {self.time} ")
+        self.amount_airdropped = total_value_airdropped
 
     def select_recipients(self, market):
         pass
@@ -251,6 +263,7 @@ class LeaderAirdropStrategy(AirdropStrategy):
 
         print(
             f"{self.get_type()} airdropped {total_airdropped} {self.coin.name} for a total of ${total_value_airdropped} at time {self.time} ")
+        self.amount_airdropped = total_value_airdropped
 
     def get_type(self):
         return "LeaderAirdropStrategy"
@@ -295,6 +308,7 @@ class BiggestHoldersAirdropStrategy(AirdropStrategy):
 
         print(
             f"{self.get_type()} airdropped {total_airdropped} {self.coin.name} for a total of ${total_value_airdropped} at time {self.time} ")
+        self.amount_airdropped = total_value_airdropped
 
     def get_type(self):
         return "BiggestHoldersAirdropStrategy"
@@ -362,6 +376,7 @@ class ProportionalBiggestHoldersAirdropStrategy(AirdropStrategy):
 
         print(
             f"{self.get_type()} airdropped {total_airdropped} {self.coin.name} for a total of ${total_value_airdropped} at time {self.time} ")
+        self.amount_airdropped = total_value_airdropped
 
     def get_type(self):
         return "ProportionalBiggestHoldersAirdropStrategy"
