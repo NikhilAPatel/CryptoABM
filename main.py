@@ -235,7 +235,7 @@ class CryptoMarket:
         imageio.mimsave(output_filename, images, fps=5)  # Adjust fps to control speed of the GIF
 
 
-num_simulations = 5
+num_simulations = 100
 
 all_price_histories = []
 all_holdings_histories = []
@@ -257,7 +257,7 @@ for i in range(num_simulations):
 
     # leader_airdrop_strategy = ProportionalLeaderAirdropStrategy(btc, 0.1, 100, 0, 0.5)
     # leader_airdrop_strategy = RandomAirdropStrategy(btc, 0, 0.2, 1000, btc1)
-    wif_airdrop_strategy = ProportionalLeaderAirdropStrategy(wif, 0.4, .6 , 1)
+    wif_airdrop_strategy = ProportionalLeaderAirdropStrategy(wif, 0.1, .3 , .4)
 
     network_type = "scale_free"
     num_rational = 90
@@ -277,7 +277,7 @@ for i in range(num_simulations):
 
     agent_structure.budgets_based_on_popularity(market) #has to be done after the market is defined
 
-    price_histories, holdings_histories, network_states, net_trade_volume_histories, trade_volume_histories, asset_allocation_data = market.simulate(50)
+    price_histories, holdings_histories, network_states, net_trade_volume_histories, trade_volume_histories, asset_allocation_data = market.simulate(20)
 
     for coin in market.coins:
         max_prices[coin.name].append(coin.highest_price)
@@ -314,3 +314,13 @@ vol20= sum(trade_volume_histories["Bitcoin"][25:46])
 
 
 # print(f"{network_type} & {num_rational} & {num_behav} & strategy & airdropcost & \\$1.00 & \\${btc.highest_price:.2f} & \\${price_histories[btc.name][-1]:.2f} & {netvol5:.0f} & {vol5:.0f} & {netvol20:.0f} & {vol20:.0f} \\\\")
+
+plt.hist(max_prices["DogWifHat"], bins=30, alpha=0.75, color='blue', edgecolor='black')
+
+# Adding labels and title
+plt.xlabel('Values')
+plt.ylabel('Frequency')
+plt.title('Histogram of Randomly Generated Data')
+
+# Show the plot
+plt.show()
